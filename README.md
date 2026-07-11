@@ -17,9 +17,9 @@ Opens at `http://localhost:5173`.
 
 ## Deployment (GitHub Pages)
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds the app and publishes `dist/` to GitHub Pages automatically.
+Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds the app and pushes `dist/` to a `gh-pages` branch.
 
-One-time setup: in the repo's **Settings → Pages**, set **Source** to "GitHub Actions".
+One-time setup: in the repo's **Settings → Pages → Build and deployment**, set **Source** to "Deploy from a branch", branch `gh-pages`, folder `/ (root)`. The `gh-pages` branch is created automatically the first time the workflow runs.
 
 The site will be served at `https://ivanzep.github.io/LM/`. The Vite `base` in `vite.config.js` is set to `/LM/` to match — update it if the repo is ever renamed.
 
