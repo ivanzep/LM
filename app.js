@@ -152,12 +152,68 @@ function loadPersisted() {
   state.playlists = load('bq-playlists', S_PLAYLISTS);
 }
 function persist(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch {} }
-function updSongs(d) { state.songs = d; persist('bq-songs', d); }
-function updSetlists(d) { state.setlists = d; persist('bq-setlists', d); }
-function updJams(d) { state.jams = d; persist('bq-jams', d); }
-function updMembers(d) { state.members = d; persist('bq-members', d); }
-function updReminders(d) { state.reminders = d; persist('bq-reminders', d); }
-function updPlaylists(d) { state.playlists = d; persist('bq-playlists', d); }
+function updSongs(d) { state.songs = d; persist('bq-songs', d); pushRemote('songs', d); }
+function updSetlists(d) { state.setlists = d; persist('bq-setlists', d); pushRemote('setlists', d); }
+function updJams(d) { state.jams = d; persist('bq-jams', d); pushRemote('jams', d); }
+function updMembers(d) { state.members = d; persist('bq-members', d); pushRemote('members', d); }
+function updReminders(d) { state.reminders = d; persist('bq-reminders', d); pushRemote('reminders', d); }
+function updPlaylists(d) { state.playlists = d; persist('bq-playlists', d); pushRemote('playlists', d); }
+
+// ── Remote sync (Google Sheets via Apps Script Web App) ────────
+// Fill in SYNC_URL with your deployed Apps Script Web App URL (see
+// apps-script/Code.gs and README.md) to enable cross-device sync.
+// Leave blank to use localStorage only (single browser/device).
+const SYNC_URL = '';
+
+let syncStatus = 'idle'; // idle | syncing | ok | error
+function syncStatusLabel() {
+  if (!SYNC_URL) return '';
+  if (syncStatus === 'syncing') return '⏳ Syncing…';
+  if (syncStatus === 'error') return '⚠ Sync failed';
+  if (syncStatus === 'ok') return '☁ Synced';
+  return '';
+}
+function setSyncStatus(s) {
+  syncStatus = s;
+  const el = document.getElementById('sync-status');
+  if (el) el.textContent = syncStatusLabel();
+}
+
+async function pushRemote(key, value) {
+  if (!SYNC_URL) return;
+  try {
+    setSyncStatus('syncing');
+    await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ key, value }),
+    });
+    setSyncStatus('ok');
+  } catch (err) {
+    setSyncStatus('error');
+  }
+}
+
+async function fetchRemote() {
+  if (!SYNC_URL) return false;
+  try {
+    setSyncStatus('syncing');
+    const res = await fetch(SYNC_URL);
+    const data = await res.json();
+    if (data.songs) state.songs = data.songs;
+    if (data.setlists) state.setlists = data.setlists;
+    if (data.jams) state.jams = data.jams;
+    if (data.members) state.members = data.members;
+    if (data.reminders) state.reminders = data.reminders;
+    if (data.playlists) state.playlists = data.playlists;
+    setSyncStatus('ok');
+    return true;
+  } catch (err) {
+    setSyncStatus('error');
+    return false;
+  }
+}
+function syncRefresh() { fetchRemote().then(() => render()); }
 
 // ── Render (focus-preserving) ──────────────────────────────────
 function render() {
@@ -850,6 +906,10 @@ function topBarTemplate() {
   return `<div style="${css({ background: C.surf, 'border-bottom': `1px solid ${C.border}`, padding: '0 16px', height: '52px', display: 'flex', 'align-items': 'center', gap: '6px', position: 'sticky', top: 0, 'z-index': 40 })}">
     <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}"><span style="font-size:18px">⚡</span> BAND HQ</div>
     <div style="${css({ display: 'flex', gap: '2px', flex: 1, 'overflow-x': 'auto' })}">${items}</div>
+    ${SYNC_URL ? `<div style="${css({ display: 'flex', 'align-items': 'center', gap: '6px', flexShrink: 0, 'margin-left': '8px' })}">
+      <span id="sync-status" style="${css({ 'font-size': '11px', color: C.dim, 'white-space': 'nowrap' })}">${syncStatusLabel()}</span>
+      <button data-action="sync-refresh" title="Reload from Google Sheet" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '15px', padding: '4px' })}">🔄</button>
+    </div>` : ''}
   </div>`;
 }
 
@@ -1041,6 +1101,7 @@ document.addEventListener('click', (e) => {
       if (custom) custom.value = color;
       return;
     }
+    case 'sync-refresh': syncRefresh(); return;
   }
 });
 
@@ -1079,3 +1140,4 @@ document.addEventListener('input', (e) => {
 // ── Init ──────────────────────────────────────────────────────
 loadPersisted();
 render();
+if (SYNC_URL) fetchRemote().then(ok => { if (ok) render(); });
