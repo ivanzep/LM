@@ -15,6 +15,16 @@ Opens at `http://localhost:5173`.
 
 ---
 
+## Deployment (GitHub Pages)
+
+Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds the app and publishes `dist/` to GitHub Pages automatically.
+
+One-time setup: in the repo's **Settings → Pages**, set **Source** to "GitHub Actions".
+
+The site will be served at `https://ivanzep.github.io/LM/`. The Vite `base` in `vite.config.js` is set to `/LM/` to match — update it if the repo is ever renamed.
+
+---
+
 ## Tech Stack
 
 | Layer | Choice |
