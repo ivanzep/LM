@@ -34,12 +34,15 @@ By default, all data lives in `localStorage` — private to one browser/device. 
 2. In the Sheet, go to **Extensions → Apps Script**, delete the placeholder code, and paste in the contents of [`apps-script/Code.gs`](apps-script/Code.gs).
 3. Click **Deploy → New deployment** → type **Web app**. Set **Execute as: Me** and **Who has access: Anyone**, then deploy and authorize it.
 4. Copy the deployment's Web App URL (ends in `/exec`).
-5. In `app.js`, find `const SYNC_URL = '';` (near the `updSongs`/`updSetlists`/etc. functions) and paste the URL in between the quotes.
-6. Commit and push — the next deploy will show a ☁ sync indicator and 🔄 refresh button in the top bar.
+5. In the app, open the **☰ menu → ⚙ Setup**, paste the URL into the Google Sheets Sync URL field, and Save.
 
-Once enabled: every add/edit/delete pushes that collection (songs, setlists, jams, members, reminders, playlists) as a JSON blob to its own row in the `Data` sheet tab, and the app fetches the full dataset from the Sheet on load. Click 🔄 anytime to pull in changes made on another device. This is last-write-wins (no real-time collaboration or conflict resolution) and each save/load is a network round-trip of a few hundred ms to a couple seconds — fine for a personal band tool, not built for heavy concurrent editing.
+No code edit or redeploy needed — the URL is saved to `localStorage` (`bq-sync-url`) and can be changed anytime from the same Setup modal, including to blank to disable sync again. The app also ships with a default URL (`DEFAULT_SYNC_URL` in app.js) used the first time any device loads the site with no saved override.
+
+Once enabled: every add/edit/delete pushes that collection (songs, setlists, jams, members, reminders, playlists) as a JSON blob to its own row in the `Data` sheet tab, and the app fetches the full dataset from the Sheet on load. Click 🔄 in the top bar anytime to pull in changes made on another device. This is last-write-wins (no real-time collaboration or conflict resolution) and each save/load is a network round-trip of a few hundred ms to a couple seconds — fine for a personal band tool, not built for heavy concurrent editing.
 
 `localStorage` still updates on every change too, so the app keeps working offline or if the Sheet is unreachable — it just won't be in sync with other devices until the network call succeeds.
+
+**Note on the default URL:** since this repo is public, `DEFAULT_SYNC_URL` (and any Apps Script Web App URL deployed as "Anyone can access") is effectively discoverable by anyone browsing the source — there's no login on the endpoint itself. That's fine for low-sensitivity data like a band's song list and jam schedule, but don't rely on this setup for anything you'd consider private.
 
 ---
 
