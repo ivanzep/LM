@@ -7,6 +7,27 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const css = (o) => Object.entries(o).map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}:${v}`).join(';');
 
+// ── Icons (inline SVG, currentColor — replaces emoji glyphs) ───
+const ICONS = {
+  lightning: '<path fill="currentColor" d="M13 2 3 14h7l-2 8 10-12h-7l2-8z"/>',
+  pick: '<path fill="currentColor" d="M12 2C7 2 3 6.5 3 11.5 3 17 7 21 12 23c5-2 9-6 9-11.5C21 6.5 17 2 12 2z"/>',
+  list: '<rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 8h9M7.5 12h9M7.5 16h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  skull: '<circle cx="12" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.3" fill="currentColor"/><circle cx="15" cy="10" r="1.3" fill="currentColor"/><path d="M9 16.5h6v1.5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.5z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10 18v1.5M12 18v1.8M14 18v1.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>',
+  flame: '<path fill="currentColor" d="M12.5 2.5c.8 3-2.5 4.7-3.8 7.3-1 2-.7 4.6 1 6.2a5 5 0 0 0 7-.2c1.8-1.9 2-4.8.5-7-1 1.7-2 2-2.8 1.6.6-1.7-.3-4.4-1.9-7.9z"/>',
+  bell: '<path d="M12 3a5 5 0 0 0-5 5v2.5c0 1.8-.7 3.5-2 4.8h14c-1.3-1.3-2-3-2-4.8V8a5 5 0 0 0-5-5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  people: '<circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 20c0-4 2.5-6.5 5.5-6.5s5.5 2.5 5.5 6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16.5" cy="9" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13.2 20c.3-3 2-5 3.6-5 2.3 0 4.2 2 4.7 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  link: '<path d="M9 15l6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10.5 6.5l1-1a4 4 0 1 1 5.7 5.7l-1.7 1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M13.5 17.5l-1 1a4 4 0 1 1-5.7-5.7l1.7-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  pin: '<path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#000"/>',
+  checkCircle: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 12.5l2.5 2.5 5-5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  bulb: '<path d="M9 18h6M10 21h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 2a6 6 0 0 0-3.5 10.9c.7.5 1 1.3 1 2.1h5c0-.8.3-1.6 1-2.1A6 6 0 0 0 12 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  refresh: '<path d="M4 12a8 8 0 0 1 13.7-5.7M20 12a8 8 0 0 1-13.7 5.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17.5 4.8v3.6h-3.6M6.5 19.2v-3.6h3.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  cloud: '<path d="M7 18a4 4 0 0 1 .5-8 5.5 5.5 0 0 1 10.3-1.8A4.2 4.2 0 0 1 17.5 18H7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  warning: '<path d="M12 3.5 21 20H3L12 3.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="0.9" fill="currentColor"/>',
+};
+function icon(name, size = 16, extraStyle = '') {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="display:inline-block;vertical-align:-3px;flex-shrink:0;${extraStyle}" xmlns="http://www.w3.org/2000/svg">${ICONS[name] || ''}</svg>`;
+}
+
 const detectPlatform = (url) => {
   if (!url) return 'link';
   if (url.includes('spotify.com')) return 'spotify';
@@ -45,7 +66,7 @@ const PINFO = {
   spotify: { name:'Spotify',      color:'#1DB954', bg:'#0A1E0D', icon:'♫' },
   youtube: { name:'YouTube',      color:'#FF4444', bg:'#200A0A', icon:'▶' },
   apple:   { name:'Apple Music',  color:'#FC3C44', bg:'#1F0B0C', icon:'♪' },
-  link:    { name:'Link',         color:'#9B9184', bg:'#241E18', icon:'🔗' },
+  link:    { name:'Link',         color:'#9B9184', bg:'#241E18', icon: icon('link', 11) },
 };
 const AVAIL_INFO = { in:[C.sage,'#1D2B18','✓ In'], out:[C.org,'#2B1510','✗ Out'], maybe:[C.acc,'#2B1013','? Maybe'] };
 
@@ -175,15 +196,15 @@ let SYNC_URL = '';
 let syncStatus = 'idle'; // idle | syncing | ok | error
 function syncStatusLabel() {
   if (!SYNC_URL) return '';
-  if (syncStatus === 'syncing') return '⏳ Syncing…';
-  if (syncStatus === 'error') return '⚠ Sync failed';
-  if (syncStatus === 'ok') return '☁ Synced';
+  if (syncStatus === 'syncing') return `${icon('refresh', 12)} Syncing…`;
+  if (syncStatus === 'error') return `${icon('warning', 12)} Sync failed`;
+  if (syncStatus === 'ok') return `${icon('cloud', 12)} Synced`;
   return '';
 }
 function setSyncStatus(s) {
   syncStatus = s;
   const el = document.getElementById('sync-status');
-  if (el) el.textContent = syncStatusLabel();
+  if (el) el.innerHTML = syncStatusLabel();
 }
 
 async function pushRemote(key, value) {
@@ -288,8 +309,8 @@ function priBadge(p) {
   const [c, bg] = m[p] || m.low;
   return `<span style="${css({ background: bg, color: c, padding: '2px 7px', 'border-radius': '4px', 'font-size': '10px', 'font-weight': 700, 'letter-spacing': '0.04em', 'text-transform': 'uppercase' })}">${esc(p)}</span>`;
 }
-function empty(icon, text) {
-  return `<div style="${css({ 'text-align': 'center', padding: '48px 0', color: C.dim })}"><div style="${css({ 'font-size': '36px', 'margin-bottom': '10px' })}">${icon}</div><div style="${css({ 'font-size': '14px' })}">${esc(text)}</div></div>`;
+function empty(iconName, text) {
+  return `<div style="${css({ 'text-align': 'center', padding: '48px 0', color: C.dim })}"><div style="${css({ 'margin-bottom': '10px' })}">${icon(iconName, 36)}</div><div style="${css({ 'font-size': '14px' })}">${esc(text)}</div></div>`;
 }
 function sh(title, sub, action) {
   return `<div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '18px' })}">
@@ -452,7 +473,7 @@ function songDetailTemplate(song) {
         ${song.artist && song.artist !== 'Original' ? `<span style="${css({ color: C.dim, 'font-size': '13px' })}">· ${esc(song.artist)}</span>` : ''}
       </div>
       ${tagsHTML}
-      ${song.tabUrl ? `<a href="${esc(song.tabUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '6px', padding: '6px 14px', background: C.raised, border: `1px solid ${C.acc}44`, 'border-radius': '6px', color: C.acc, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">🎸 ${esc(tabSite || 'View Tab')} ↗</a>` : ''}
+      ${song.tabUrl ? `<a href="${esc(song.tabUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '6px', padding: '6px 14px', background: C.raised, border: `1px solid ${C.acc}44`, 'border-radius': '6px', color: C.acc, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">${icon('pick', 14)} ${esc(tabSite || 'View Tab')} ↗</a>` : ''}
     </div>
     <div style="${css({ display: 'flex', gap: '2px', background: '#080808', 'border-radius': '8px', padding: '3px', width: 'fit-content', 'margin-bottom': '10px' })}">${tabsRow}</div>
     <div style="${css({ border: `1px solid ${C.border}`, 'border-radius': '10px', overflow: 'hidden' })}">
@@ -491,7 +512,7 @@ function songsViewTemplate() {
 
   let grid;
   if (filtered.length === 0) {
-    grid = empty('🎸', songQuery || songFilter !== 'all' ? 'No songs match.' : 'Add your first song!');
+    grid = empty('pick', songQuery || songFilter !== 'all' ? 'No songs match.' : 'Add your first song!');
   } else {
     grid = `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' })}">
       ${filtered.map(song => `
@@ -552,7 +573,7 @@ function addSongToSetlist(slId, sId) {
 
 function setlistsViewTemplate() {
   const { slExpanded } = state.ui;
-  const list = state.setlists.length === 0 ? empty('📋', 'No setlists yet.') : state.setlists.map(sl => {
+  const list = state.setlists.length === 0 ? empty('list', 'No setlists yet.') : state.setlists.map(sl => {
     const open = slExpanded === sl.id;
     const slSongs = (sl.songIds || []).map(id => state.songs.find(s => s.id === id)).filter(Boolean);
     const songsHTML = slSongs.length === 0
@@ -704,7 +725,7 @@ function proposedJamBlockTemplate(jam) {
         <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '20px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '3px' })}">
           ${fmtDate(jam.date)}${jam.time ? `<span style="color:${C.acc};font-size:15px;font-weight:400;font-family:'DM Sans', sans-serif;margin-left:10px">${fmtTime(jam.time)}</span>` : ''}
         </div>
-        ${jam.location ? `<div style="${css({ 'font-size': '12px', color: C.sub })}">📍 ${esc(jam.location)}</div>` : ''}
+        ${jam.location ? `<div style="${css({ 'font-size': '12px', color: C.sub })}">${icon('pin', 13)} ${esc(jam.location)}</div>` : ''}
       </div>
       <div style="${css({ display: 'flex', gap: '6px', flexShrink: 0, 'margin-left': '16px' })}">
         <span style="${css({ background: '#1D2B18', color: C.sage, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${inMembers.length}✓</span>
@@ -715,7 +736,7 @@ function proposedJamBlockTemplate(jam) {
     </div>
     <div style="${css({ 'padding-left': '4px' })}">${state.members.map(m => jamMemberRow(jam, m, true)).join('')}</div>
     <div style="${css({ display: 'flex', gap: '8px', 'margin-top': '10px', 'padding-left': '4px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
-      <button data-action="confirm-jam" data-id="${jam.id}" style="${css({ background: canConfirm ? C.sage : 'transparent', color: canConfirm ? C.bg : C.sage, border: `1.5px solid ${C.sage}`, padding: '5px 14px', 'border-radius': '6px', cursor: 'pointer', 'font-size': '12px', 'font-weight': 700, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px' })}">${canConfirm ? '✅ Confirm Jam' : `Confirm (${inMembers.length}/${Math.ceil(total / 2)} votes)`}</button>
+      <button data-action="confirm-jam" data-id="${jam.id}" style="${css({ background: canConfirm ? C.sage : 'transparent', color: canConfirm ? C.bg : C.sage, border: `1.5px solid ${C.sage}`, padding: '5px 14px', 'border-radius': '6px', cursor: 'pointer', 'font-size': '12px', 'font-weight': 700, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px' })}">${canConfirm ? `${icon('checkCircle', 14)} Confirm Jam` : `Confirm (${inMembers.length}/${Math.ceil(total / 2)} votes)`}</button>
       ${btn('✏ Edit', { action: 'open-edit-jam-modal', data: { id: jam.id }, sm: true })}
       ${btn('Delete', { action: 'delete-jam', data: { id: jam.id }, sm: true, variant: 'danger' })}
     </div>
@@ -777,7 +798,7 @@ function playlistsViewTemplate() {
   const filtered = state.playlists.filter(pl => plMemberFilter === 'all' || pl.memberId === plMemberFilter);
   const memberChips = state.members.map(m => `<button data-action="set-playlist-member-filter" data-member="${m.id}" style="${chipStyle(plMemberFilter === m.id)}"><span style="${css({ width: '7px', height: '7px', 'border-radius': '50%', background: m.color, display: 'inline-block', 'margin-right': '4px' })}"></span>${esc(m.name)}</button>`).join('');
 
-  const list = filtered.length === 0 ? empty('🎵', 'No playlists yet.') : filtered.map(pl => {
+  const list = filtered.length === 0 ? empty('flame', 'No playlists yet.') : filtered.map(pl => {
     const member = state.members.find(m => m.id === pl.memberId);
     const platform = detectPlatform(pl.url);
     const pInfo = PINFO[platform];
@@ -798,7 +819,7 @@ function playlistsViewTemplate() {
         <button data-action="delete-playlist" data-id="${pl.id}" style="${css({ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', 'font-size': '14px', 'margin-left': '8px', flexShrink: 0 })}">✕</button>
       </div>
       <div style="${css({ display: 'flex', gap: '8px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
-        <a href="${esc(pl.url)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px', padding: '5px 12px', background: pInfo.bg, border: `1px solid ${pInfo.color}44`, 'border-radius': '6px', color: pInfo.color, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">🔗 Open in ${pInfo.name}</a>
+        <a href="${esc(pl.url)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px', padding: '5px 12px', background: pInfo.bg, border: `1px solid ${pInfo.color}44`, 'border-radius': '6px', color: pInfo.color, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">${icon('link', 13)} Open in ${pInfo.name}</a>
         ${embedUrl ? btn(isExpanded ? '▲ Hide Player' : '▶ Show Player', { action: 'toggle-playlist-embed', data: { id: pl.id }, sm: true }) : ''}
       </div>
       ${isExpanded && embedUrl ? `<div style="${css({ 'margin-top': '14px' })}">
@@ -840,7 +861,7 @@ function remindersViewTemplate() {
   const visible = state.reminders.filter(r => remShowDone ? r.done : !r.done).sort((a, b) => (priOrd[a.priority] ?? 2) - (priOrd[b.priority] ?? 2) || (a.dueDate || '').localeCompare(b.dueDate || ''));
   const overdueCount = state.reminders.filter(r => !r.done && r.dueDate && r.dueDate < TODAY).length;
 
-  const list = visible.length === 0 ? empty(remShowDone ? '📝' : '🎉', remShowDone ? 'Nothing completed yet.' : 'All clear!') : visible.map(r => {
+  const list = visible.length === 0 ? empty(remShowDone ? 'list' : 'checkCircle', remShowDone ? 'Nothing completed yet.' : 'All clear!') : visible.map(r => {
     const overdue = !r.done && r.dueDate && r.dueDate < TODAY;
     return `<div style="${css({ background: C.surf, border: `1px solid ${overdue ? C.org + '44' : C.border}`, 'border-radius': '8px', padding: '12px 14px', 'margin-bottom': '8px', display: 'flex', 'align-items': 'flex-start', gap: '12px' })}">
       <div data-action="toggle-reminder" data-id="${r.id}" style="${css({ width: '20px', height: '20px', 'border-radius': '5px', border: `1.5px solid ${r.done ? C.sage : C.border}`, background: r.done ? C.sage : 'transparent', cursor: 'pointer', flexShrink: 0, 'margin-top': '2px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', transition: 'all 0.15s' })}">${r.done ? `<span style="color:${C.bg};font-size:11px;font-weight:900">✓</span>` : ''}</div>
@@ -848,7 +869,7 @@ function remindersViewTemplate() {
         <div style="${css({ 'font-size': '14px', color: r.done ? C.dim : C.txt, 'text-decoration': r.done ? 'line-through' : 'none', 'margin-bottom': '5px', 'word-break': 'break-word' })}">${esc(r.text)}</div>
         <div style="${css({ display: 'flex', gap: '8px', 'align-items': 'center', 'flex-wrap': 'wrap' })}">
           ${priBadge(r.priority)}
-          ${r.dueDate ? `<span style="${css({ 'font-size': '11px', color: overdue ? C.org : C.sub })}">${overdue ? '⚠ ' : ''}Due ${fmtDate(r.dueDate)}</span>` : ''}
+          ${r.dueDate ? `<span style="${css({ 'font-size': '11px', color: overdue ? C.org : C.sub })}">${overdue ? icon('warning', 12) + ' ' : ''}Due ${fmtDate(r.dueDate)}</span>` : ''}
         </div>
       </div>
       <button data-action="delete-reminder" data-id="${r.id}" style="${css({ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', 'font-size': '14px', flexShrink: 0 })}">✕</button>
@@ -881,7 +902,7 @@ function saveMember(mode, id) {
 }
 
 function membersViewTemplate() {
-  const list = state.members.length === 0 ? empty('👥', 'No members yet.') : `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(190px, 1fr))', gap: '10px' })}">
+  const list = state.members.length === 0 ? empty('people', 'No members yet.') : `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(190px, 1fr))', gap: '10px' })}">
     ${state.members.map(m => `<div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '16px' })}">
       <div style="${css({ display: 'flex', 'align-items': 'center', gap: '12px', 'margin-bottom': '12px' })}">
         <div style="${css({ width: '42px', height: '42px', 'border-radius': '50%', background: m.color, display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': "'Bebas Neue', sans-serif", 'font-size': '20px', color: C.bg, 'font-weight': 700, flexShrink: 0 })}">${esc(m.name.charAt(0).toUpperCase())}</div>
@@ -902,31 +923,31 @@ function membersViewTemplate() {
 
 // ── Top bar / content / modal assembly ─────────────────────────
 const NAV = [
-  { id: 'songs', icon: '🎸', label: 'Songs' },
-  { id: 'setlists', icon: '📋', label: 'Setlists' },
-  { id: 'jams', icon: '📅', label: 'Jams' },
-  { id: 'playlists', icon: '🎵', label: 'Playlists' },
-  { id: 'reminders', icon: '🔔', label: 'Reminders' },
-  { id: 'members', icon: '👥', label: 'Members' },
+  { id: 'songs', icon: 'pick', label: 'Songs' },
+  { id: 'setlists', icon: 'list', label: 'Setlists' },
+  { id: 'jams', icon: 'skull', label: 'Jams' },
+  { id: 'playlists', icon: 'flame', label: 'Playlists' },
+  { id: 'reminders', icon: 'bell', label: 'Reminders' },
+  { id: 'members', icon: 'people', label: 'Members' },
 ];
 
 function navClick(id) { state.nav = id; state.songPage = null; sdPlaying = false; stopTeleprompterInterval(); render(); }
 
 function topBarTemplate() {
   const pendingRem = state.reminders.filter(r => !r.done).length;
-  const items = NAV.map(({ id, icon, label }) => {
+  const items = NAV.map(({ id, icon: iconName, label }) => {
     const active = state.nav === id;
     const badge = id === 'reminders' && pendingRem > 0 ? `<span style="${css({ background: C.org, color: 'white', 'border-radius': '50%', width: '15px', height: '15px', 'font-size': '9px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-weight': 700, position: 'absolute', top: '2px', right: '2px' })}">${pendingRem}</span>` : '';
     const openBadge = id === 'songs' && state.songPage && active ? `<span style="${css({ background: C.acc, color: C.txt, 'border-radius': '4px', padding: '1px 5px', 'font-size': '9px', 'font-weight': 700, 'margin-left': '2px' })}">OPEN</span>` : '';
-    return `<button data-action="nav" data-id="${id}" style="${css({ padding: '5px 11px', 'border-radius': '6px', border: 'none', cursor: 'pointer', 'font-size': '13px', 'font-weight': 500, 'white-space': 'nowrap', 'font-family': "'DM Sans', sans-serif", background: active ? C.raised : 'transparent', color: active ? C.acc : C.sub, display: 'flex', 'align-items': 'center', gap: '5px', position: 'relative' })}"><span>${icon}</span><span>${label}</span>${badge}${openBadge}</button>`;
+    return `<button data-action="nav" data-id="${id}" style="${css({ padding: '5px 11px', 'border-radius': '6px', border: 'none', cursor: 'pointer', 'font-size': '13px', 'font-weight': 500, 'white-space': 'nowrap', 'font-family': "'DM Sans', sans-serif", background: active ? C.raised : 'transparent', color: active ? C.acc : C.sub, display: 'flex', 'align-items': 'center', gap: '5px', position: 'relative' })}">${icon(iconName, 15)}<span>${label}</span>${badge}${openBadge}</button>`;
   }).join('');
 
   return `<div style="${css({ background: C.surf, 'border-bottom': `1px solid ${C.border}`, padding: '0 16px', height: '52px', display: 'flex', 'align-items': 'center', gap: '6px', position: 'sticky', top: 0, 'z-index': 40 })}">
-    <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}"><span style="font-size:18px">⚡</span> BAND HQ</div>
+    <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}">${icon('lightning', 19)} LUCKY MACHOS</div>
     <div style="${css({ display: 'flex', gap: '2px', flex: 1, 'overflow-x': 'auto' })}">${items}</div>
     ${SYNC_URL ? `<div style="${css({ display: 'flex', 'align-items': 'center', gap: '6px', flexShrink: 0, 'margin-left': '8px' })}">
       <span id="sync-status" style="${css({ 'font-size': '11px', color: C.dim, 'white-space': 'nowrap' })}">${syncStatusLabel()}</span>
-      <button data-action="sync-refresh" title="Reload from Google Sheet" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '15px', padding: '4px' })}">🔄</button>
+      <button data-action="sync-refresh" title="Reload from Google Sheet" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', padding: '4px', display: 'flex', 'align-items': 'center' })}">${icon('refresh', 15)}</button>
     </div>` : ''}
     <div id="hamburger-wrapper" style="${css({ position: 'relative', flexShrink: 0, 'margin-left': '8px' })}">
       <button data-action="toggle-menu" title="Menu" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '17px', padding: '4px 6px' })}">☰</button>
@@ -982,7 +1003,7 @@ function modalTemplate() {
     const isAdd = m.type === 'addJam';
     const jam = isAdd ? { date: '', time: '', location: '', notes: '' } : state.jams.find(j => j.id === m.id);
     return modalWrap(isAdd ? 'Propose a Date' : 'Edit Jam', `
-      ${isAdd ? `<div style="${css({ 'font-size': '13px', color: C.sub, 'margin-bottom': '16px', background: C.raised, 'border-radius': '6px', padding: '8px 12px', 'line-height': 1.6 })}">💡 Propose a date and the band votes In / Maybe / Out. Confirm it once there's enough interest.</div>` : ''}
+      ${isAdd ? `<div style="${css({ 'font-size': '13px', color: C.sub, 'margin-bottom': '16px', background: C.raised, 'border-radius': '6px', padding: '8px 12px', 'line-height': 1.6 })}">${icon('bulb', 14)} Propose a date and the band votes In / Maybe / Out. Confirm it once there's enough interest.</div>` : ''}
       <div style="${css({ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '12px', 'margin-bottom': '12px' })}">
         <div>${lbl('Date *')}${inputHTML({ id: 'jf-date', value: jam.date, type: 'date' })}</div>
         <div>${lbl('Time')}${inputHTML({ id: 'jf-time', value: jam.time || '', type: 'time' })}</div>
@@ -1160,7 +1181,7 @@ document.addEventListener('input', (e) => {
       const platform = detectPlatform(t.value);
       const info = PINFO[platform];
       preview.style.color = info.color;
-      preview.textContent = t.value ? `${info.icon} Detected: ${info.name}` : '';
+      preview.innerHTML = t.value ? `${info.icon} Detected: ${esc(info.name)}` : '';
     }
     return;
   }
