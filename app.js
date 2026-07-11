@@ -137,8 +137,14 @@ const state = {
     plMemberFilter: 'all',
     plShowEmbed: {},
     remShowDone: false,
+    menuOpen: false,
   },
 };
+
+// Default Google Apps Script Web App URL (see apps-script/Code.gs and
+// README). Overridable at runtime via the hamburger menu's Setup modal —
+// that choice is persisted to localStorage under bq-sync-url.
+const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbz6c2D08WnBlkpb3gott61ZHo7UlFFPnYUVpHkx6Ix9WJODp6CoxmOqus8_uI8CrGwW/exec';
 
 function loadPersisted() {
   const load = (key, fallback) => {
@@ -150,6 +156,7 @@ function loadPersisted() {
   state.members = load('bq-members', S_MEMBERS);
   state.reminders = load('bq-reminders', S_REMINDERS);
   state.playlists = load('bq-playlists', S_PLAYLISTS);
+  SYNC_URL = load('bq-sync-url', DEFAULT_SYNC_URL);
 }
 function persist(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch {} }
 function updSongs(d) { state.songs = d; persist('bq-songs', d); pushRemote('songs', d); }
@@ -160,10 +167,10 @@ function updReminders(d) { state.reminders = d; persist('bq-reminders', d); push
 function updPlaylists(d) { state.playlists = d; persist('bq-playlists', d); pushRemote('playlists', d); }
 
 // ── Remote sync (Google Sheets via Apps Script Web App) ────────
-// Fill in SYNC_URL with your deployed Apps Script Web App URL (see
-// apps-script/Code.gs and README.md) to enable cross-device sync.
-// Leave blank to use localStorage only (single browser/device).
-const SYNC_URL = '';
+// Set via the hamburger menu's Setup modal (persisted to bq-sync-url);
+// defaults to DEFAULT_SYNC_URL. Leave blank there to disable and use
+// localStorage only (single browser/device).
+let SYNC_URL = '';
 
 let syncStatus = 'idle'; // idle | syncing | ok | error
 function syncStatusLabel() {
@@ -214,6 +221,17 @@ async function fetchRemote() {
   }
 }
 function syncRefresh() { fetchRemote().then(() => render()); }
+
+function openSetupModal() { state.modal = { type: 'setup' }; render(); }
+function saveSetup() {
+  const url = document.getElementById('stf-syncUrl').value.trim();
+  SYNC_URL = url;
+  persist('bq-sync-url', url);
+  setSyncStatus('idle');
+  state.modal = null;
+  render();
+  if (SYNC_URL) fetchRemote().then(ok => { if (ok) render(); });
+}
 
 // ── Render (focus-preserving) ──────────────────────────────────
 function render() {
@@ -910,6 +928,12 @@ function topBarTemplate() {
       <span id="sync-status" style="${css({ 'font-size': '11px', color: C.dim, 'white-space': 'nowrap' })}">${syncStatusLabel()}</span>
       <button data-action="sync-refresh" title="Reload from Google Sheet" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '15px', padding: '4px' })}">🔄</button>
     </div>` : ''}
+    <div id="hamburger-wrapper" style="${css({ position: 'relative', flexShrink: 0, 'margin-left': '8px' })}">
+      <button data-action="toggle-menu" title="Menu" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '17px', padding: '4px 6px' })}">☰</button>
+      ${state.ui.menuOpen ? `<div style="${css({ position: 'absolute', top: '100%', right: 0, background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '4px', 'min-width': '150px', 'z-index': 60, 'box-shadow': '0 8px 24px #00000066' })}">
+        <button data-action="open-setup-modal" style="${css({ display: 'flex', 'align-items': 'center', gap: '8px', width: '100%', background: 'none', border: 'none', color: C.txt, cursor: 'pointer', 'font-size': '13px', 'font-family': "'DM Sans', sans-serif", padding: '8px 10px', 'border-radius': '5px', 'text-align': 'left' })}">⚙ Setup</button>
+      </div>` : ''}
+    </div>
   </div>`;
 }
 
@@ -1022,6 +1046,16 @@ function modalTemplate() {
       </div>
     `);
   }
+  if (m.type === 'setup') {
+    return modalWrap('Setup', `
+      <div style="${css({ 'margin-bottom': '8px' })}">${lbl('Google Sheets Sync URL')}${inputHTML({ id: 'stf-syncUrl', value: SYNC_URL, placeholder: 'https://script.google.com/macros/s/.../exec' })}</div>
+      <div style="${css({ 'font-size': '11px', color: C.dim, 'margin-bottom': '20px', 'line-height': 1.6 })}">Paste your deployed Google Apps Script Web App URL to enable cross-device sync (see apps-script/Code.gs and README). Leave blank to disable sync and use local storage only on this device.</div>
+      <div style="${css({ display: 'flex', gap: '8px', 'justify-content': 'flex-end' })}">
+        ${btn('Cancel', { action: 'close-modal' })}
+        ${btn('Save', { action: 'save-setup', variant: 'primary' })}
+      </div>
+    `);
+  }
   return '';
 }
 
@@ -1036,12 +1070,19 @@ function appTemplate() {
 // ── Event delegation ────────────────────────────────────────────
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
-  if (!el) return;
+  if (!el) {
+    if (state.ui.menuOpen) { state.ui.menuOpen = false; render(); }
+    return;
+  }
   const action = el.dataset.action;
   const id = el.dataset.id;
+  if (state.ui.menuOpen && action !== 'toggle-menu') state.ui.menuOpen = false;
 
   switch (action) {
     case 'noop': return;
+    case 'toggle-menu': state.ui.menuOpen = !state.ui.menuOpen; render(); return;
+    case 'open-setup-modal': openSetupModal(); return;
+    case 'save-setup': saveSetup(); return;
     case 'close-modal':
       state.modal = null; state.ui.slPicker = null; render(); return;
     case 'nav': navClick(id); return;
