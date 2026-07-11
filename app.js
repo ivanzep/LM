@@ -40,14 +40,14 @@ const getTabSiteName = (url) => {
 };
 
 // ── Design tokens ─────────────────────────────────────────────
-const C = { bg:'#0C0A09', surf:'#1A1612', raised:'#241E18', border:'#332B22', acc:'#D4A853', org:'#E8613C', sage:'#8B9E6F', blue:'#6B9FBF', txt:'#F2EEE6', sub:'#9B9184', dim:'#5C5248' };
+const C = { bg:'#000000', surf:'#111111', raised:'#1B1B1B', border:'#2C2C2C', acc:'#E5383B', org:'#FF7A1A', sage:'#8B9E6F', blue:'#6B9FBF', txt:'#F2F2F2', sub:'#A0A0A0', dim:'#5A5A5A' };
 const PINFO = {
   spotify: { name:'Spotify',      color:'#1DB954', bg:'#0A1E0D', icon:'♫' },
   youtube: { name:'YouTube',      color:'#FF4444', bg:'#200A0A', icon:'▶' },
   apple:   { name:'Apple Music',  color:'#FC3C44', bg:'#1F0B0C', icon:'♪' },
   link:    { name:'Link',         color:'#9B9184', bg:'#241E18', icon:'🔗' },
 };
-const AVAIL_INFO = { in:[C.sage,'#1D2B18','✓ In'], out:[C.org,'#2B1510','✗ Out'], maybe:[C.acc,'#2B2110','? Maybe'] };
+const AVAIL_INFO = { in:[C.sage,'#1D2B18','✓ In'], out:[C.org,'#2B1510','✗ Out'], maybe:[C.acc,'#2B1013','? Maybe'] };
 
 // ── Seed data ─────────────────────────────────────────────────
 const S_MEMBERS = [
@@ -254,7 +254,7 @@ function render() {
 // ── Shared atoms ──────────────────────────────────────────────
 function btn(label, { action = '', data = {}, variant = 'ghost', sm = false, extraStyle = {}, id = '' } = {}) {
   const base = { padding: sm ? '5px 10px' : '7px 14px', 'border-radius': '6px', border: 'none', cursor: 'pointer', 'font-size': sm ? '11px' : '13px', 'font-weight': 600, 'font-family': "'DM Sans', sans-serif", display: 'inline-flex', 'align-items': 'center', gap: '5px' };
-  const v = { primary: { background: C.acc, color: '#0C0A09' }, ghost: { background: 'transparent', color: C.sub, border: `1px solid ${C.border}` }, danger: { background: 'transparent', color: C.org, border: `1px solid ${C.org}44` } };
+  const v = { primary: { background: C.acc, color: C.txt }, ghost: { background: 'transparent', color: C.sub, border: `1px solid ${C.border}` }, danger: { background: 'transparent', color: C.org, border: `1px solid ${C.org}44` } };
   const style = css({ ...base, ...(v[variant] || v.ghost), ...extraStyle });
   const dataAttrs = Object.entries(data).map(([k, val]) => `data-${k}="${esc(val)}"`).join(' ');
   return `<button ${id ? `id="${id}"` : ''} data-action="${action}" ${dataAttrs} style="${style}">${label}</button>`;
@@ -272,19 +272,19 @@ function selHTML({ id, value, options, extraStyle = {} }) {
 }
 
 function taHTML({ id, value = '', placeholder = '', rows = 4, mono = false }) {
-  const style = css({ background: mono ? '#0A0806' : C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: mono ? C.acc : C.txt, 'font-family': mono ? "'JetBrains Mono', monospace" : "'DM Sans', sans-serif", 'font-size': mono ? '12px' : '14px', padding: '10px 12px', width: '100%', outline: 'none', resize: 'vertical', 'line-height': 1.6, 'box-sizing': 'border-box' });
+  const style = css({ background: mono ? '#080808' : C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: mono ? C.acc : C.txt, 'font-family': mono ? "'JetBrains Mono', monospace" : "'DM Sans', sans-serif", 'font-size': mono ? '12px' : '14px', padding: '10px 12px', width: '100%', outline: 'none', resize: 'vertical', 'line-height': 1.6, 'box-sizing': 'border-box' });
   return `<textarea id="${id}" placeholder="${esc(placeholder)}" rows="${rows}" style="${style}">${esc(value)}</textarea>`;
 }
 
 function lbl(text) { return `<div style="${css({ 'font-size': '10px', 'font-weight': 700, color: C.sub, 'letter-spacing': '0.06em', 'text-transform': 'uppercase', 'margin-bottom': '5px' })}">${text}</div>`; }
 
 function statusBadge(status) {
-  const m = { ready: [C.sage, '#1D2B18', 'Ready'], learning: [C.acc, '#2B2110', 'Learning'], shelved: [C.dim, '#1E1A16', 'Shelved'] };
+  const m = { ready: [C.sage, '#1D2B18', 'Ready'], learning: [C.acc, '#2B1013', 'Learning'], shelved: [C.dim, '#1E1E1E', 'Shelved'] };
   const [c, bg, l] = m[status] || m.shelved;
   return `<span style="${css({ background: bg, color: c, padding: '2px 7px', 'border-radius': '4px', 'font-size': '10px', 'font-weight': 700, 'letter-spacing': '0.04em' })}">${l}</span>`;
 }
 function priBadge(p) {
-  const m = { high: [C.org, '#2B1510'], medium: [C.acc, '#2B2110'], low: [C.sage, '#1D2B18'] };
+  const m = { high: [C.org, '#2B1510'], medium: [C.acc, '#2B1013'], low: [C.sage, '#1D2B18'] };
   const [c, bg] = m[p] || m.low;
   return `<span style="${css({ background: bg, color: c, padding: '2px 7px', 'border-radius': '4px', 'font-size': '10px', 'font-weight': 700, 'letter-spacing': '0.04em', 'text-transform': 'uppercase' })}">${esc(p)}</span>`;
 }
@@ -293,16 +293,16 @@ function empty(icon, text) {
 }
 function sh(title, sub, action) {
   return `<div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '18px' })}">
-    <div><span style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em' })}">${title}</span>${sub ? `<span style="${css({ color: C.sub, 'font-size': '15px', 'margin-left': '8px' })}">${sub}</span>` : ''}</div>
+    <div><span style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em' })}">${title}</span>${sub ? `<span style="${css({ color: C.sub, 'font-size': '15px', 'margin-left': '8px' })}">${sub}</span>` : ''}</div>
     ${action || ''}
   </div>`;
 }
-function chipStyle(active) { return css({ padding: '5px 12px', 'border-radius': '16px', border: `1px solid ${active ? C.acc : C.border}`, background: active ? C.acc : 'transparent', color: active ? '#0C0A09' : C.sub, 'font-size': '12px', 'font-weight': 600, cursor: 'pointer' }); }
+function chipStyle(active) { return css({ padding: '5px 12px', 'border-radius': '16px', border: `1px solid ${active ? C.acc : C.border}`, background: active ? C.acc : 'transparent', color: active ? C.txt : C.sub, 'font-size': '12px', 'font-weight': 600, cursor: 'pointer' }); }
 function modalWrap(title, bodyHTML) {
   return `<div id="modal-backdrop" data-action="close-modal" style="${css({ position: 'fixed', inset: 0, background: '#00000094', 'z-index': 100, display: 'flex', 'align-items': 'center', 'justify-content': 'center', padding: '16px' })}">
     <div data-action="noop" style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '14px', padding: '24px', width: '100%', 'max-width': '580px', 'max-height': '90vh', 'overflow-y': 'auto' })}">
       <div style="${css({ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-bottom': '20px' })}">
-        <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '19px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.03em' })}">${title}</div>
+        <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '19px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.03em' })}">${title}</div>
         <button data-action="close-modal" style="${css({ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', 'font-size': '18px' })}">✕</button>
       </div>
       ${bodyHTML}
@@ -443,7 +443,7 @@ function songDetailTemplate(song) {
       ${btn('✏ Edit Song', { action: 'open-edit-song-modal', data: { id: song.id } })}
     </div>
     <div style="${css({ 'margin-bottom': '18px', 'padding-bottom': '18px', 'border-bottom': `1px solid ${C.border}` })}">
-      <h1 style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '28px', 'font-weight': 500, 'letter-spacing': '0.02em', color: C.txt, margin: '0 0 10px 0' })}">${esc(song.title)}</h1>
+      <h1 style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '28px', 'font-weight': 500, 'letter-spacing': '0.02em', color: C.txt, margin: '0 0 10px 0' })}">${esc(song.title)}</h1>
       <div style="${css({ display: 'flex', gap: '8px', 'align-items': 'center', 'flex-wrap': 'wrap', 'margin-bottom': '8px' })}">
         ${statusBadge(song.status)}
         <span style="${css({ color: C.sub, 'font-size': '13px' })}">${esc(song.key)}</span>
@@ -454,9 +454,9 @@ function songDetailTemplate(song) {
       ${tagsHTML}
       ${song.tabUrl ? `<a href="${esc(song.tabUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '6px', padding: '6px 14px', background: C.raised, border: `1px solid ${C.acc}44`, 'border-radius': '6px', color: C.acc, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">🎸 ${esc(tabSite || 'View Tab')} ↗</a>` : ''}
     </div>
-    <div style="${css({ display: 'flex', gap: '2px', background: '#0A0806', 'border-radius': '8px', padding: '3px', width: 'fit-content', 'margin-bottom': '10px' })}">${tabsRow}</div>
+    <div style="${css({ display: 'flex', gap: '2px', background: '#080808', 'border-radius': '8px', padding: '3px', width: 'fit-content', 'margin-bottom': '10px' })}">${tabsRow}</div>
     <div style="${css({ border: `1px solid ${C.border}`, 'border-radius': '10px', overflow: 'hidden' })}">
-      <div id="sd-scrollbox" style="${css({ height: 'calc(100vh - 420px)', 'min-height': '220px', 'overflow-y': 'auto', background: sdTab === 'tabs' ? '#0A0806' : C.surf, padding: '20px 24px' })}">${content}</div>
+      <div id="sd-scrollbox" style="${css({ height: 'calc(100vh - 420px)', 'min-height': '220px', 'overflow-y': 'auto', background: sdTab === 'tabs' ? '#080808' : C.surf, padding: '20px 24px' })}">${content}</div>
       <div style="${css({ background: C.raised, 'border-top': `1px solid ${C.border}`, padding: '9px 16px', display: 'flex', 'align-items': 'center', gap: '12px', 'flex-wrap': 'wrap' })}">
         <button data-action="teleprompter-reset" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '12px', 'font-weight': 600, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '4px', padding: 0 })}">↑ Top</button>
         <div style="${css({ width: '1px', height: '16px', background: C.border })}"></div>
@@ -497,7 +497,7 @@ function songsViewTemplate() {
       ${filtered.map(song => `
         <div data-action="open-song" data-id="${song.id}" style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '11px 14px', cursor: 'pointer', transition: 'all 0.15s', position: 'relative', display: 'flex', 'align-items': 'center', gap: '10px' })}">
           <div style="${css({ flex: 1, 'min-width': 0 })}">
-            <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '15px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.title)}</div>
+            <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '15px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.title)}</div>
             ${song.artist ? `<div style="${css({ 'font-size': '11px', color: C.dim, 'margin-top': '2px', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.artist)}</div>` : ''}
           </div>
           <span style="${css({ color: C.acc, 'font-size': '13px', flexShrink: 0 })}">→</span>
@@ -559,7 +559,7 @@ function setlistsViewTemplate() {
       ? `<div style="${css({ 'text-align': 'center', padding: '16px 0', color: C.dim, 'font-size': '13px' })}">No songs yet.</div>`
       : slSongs.map((song, i) => `
         <div style="${css({ display: 'flex', 'align-items': 'center', gap: '10px', padding: '8px 10px', background: C.raised, 'border-radius': '8px', 'margin-bottom': '6px' })}">
-          <span style="${css({ 'font-family': "'Oswald', sans-serif", color: C.acc, 'font-size': '18px', width: '22px', 'text-align': 'right', flexShrink: 0 })}">${i + 1}</span>
+          <span style="${css({ 'font-family': "'Bebas Neue', sans-serif", color: C.acc, 'font-size': '18px', width: '22px', 'text-align': 'right', flexShrink: 0 })}">${i + 1}</span>
           <div style="${css({ flex: 1 })}">
             <div style="${css({ 'font-size': '14px', 'font-weight': 500, color: C.txt })}">${esc(song.title)}</div>
             <div style="${css({ 'font-size': '11px', color: C.sub })}">${esc(song.key)} · ${esc(song.bpm)} BPM${song.genre ? ` · ${esc(song.genre)}` : ''}</div>
@@ -576,7 +576,7 @@ function setlistsViewTemplate() {
     return `<div style="${css({ background: C.surf, border: `1px solid ${open ? C.acc : C.border}`, 'border-radius': '10px', padding: '16px', 'margin-bottom': '10px', transition: 'border-color 0.15s' })}">
       <div data-action="toggle-setlist-expand" data-id="${sl.id}" style="${css({ cursor: 'pointer', display: 'flex', 'justify-content': 'space-between', 'align-items': 'flex-start' })}">
         <div>
-          <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '17px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '4px' })}">${esc(sl.name)}</div>
+          <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '17px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '4px' })}">${esc(sl.name)}</div>
           <div style="${css({ 'font-size': '12px', color: C.sub })}">${slSongs.length} song${slSongs.length !== 1 ? 's' : ''}${sl.created ? `<span style="color:${C.dim}"> · ${fmtDate(sl.created)}</span>` : ''}</div>
         </div>
         <div style="${css({ display: 'flex', gap: '6px', 'align-items': 'center' })}">
@@ -660,7 +660,7 @@ function jamCardTemplate(jam, variant) {
   return `<div style="${css({ background: C.surf, border: `1px solid ${borderColor}`, 'border-left': `3px solid ${leftColor}`, 'border-radius': '10px', padding: '16px', 'margin-bottom': '8px', opacity: variant === 'past' ? 0.7 : 1 })}">
     <div data-action="toggle-jam-card" data-id="${jam.id}" style="${css({ cursor: 'pointer', display: 'flex', 'justify-content': 'space-between', 'align-items': 'center' })}">
       <div style="${css({ flex: 1, 'min-width': 0 })}">
-        <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '16px', 'font-weight': 500, color: variant === 'past' ? C.sub : C.txt, 'letter-spacing': '0.02em', display: 'flex', 'align-items': 'center', gap: '8px', 'flex-wrap': 'wrap' })}">
+        <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 500, color: variant === 'past' ? C.sub : C.txt, 'letter-spacing': '0.02em', display: 'flex', 'align-items': 'center', gap: '8px', 'flex-wrap': 'wrap' })}">
           ${fmtDate(jam.date)}
           ${jam.time ? `<span style="${css({ color: variant === 'past' ? C.dim : C.acc, 'font-size': '13px', 'font-weight': 400, 'font-family': "'DM Sans', sans-serif" })}">${fmtTime(jam.time)}</span>` : ''}
           ${jam.location ? `<span style="${css({ color: C.dim, 'font-size': '13px', 'font-weight': 400, 'font-family': "'DM Sans', sans-serif" })}">· ${esc(jam.location)}</span>` : ''}
@@ -701,21 +701,21 @@ function proposedJamBlockTemplate(jam) {
   return `<div style="${css({ 'margin-bottom': '22px' })}">
     <div style="${css({ background: C.surf, border: `1px solid ${C.acc}44`, 'border-left': `3px solid ${C.acc}`, 'border-radius': '10px', padding: '13px 16px', display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '6px' })}">
       <div>
-        <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '20px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '3px' })}">
+        <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '20px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '3px' })}">
           ${fmtDate(jam.date)}${jam.time ? `<span style="color:${C.acc};font-size:15px;font-weight:400;font-family:'DM Sans', sans-serif;margin-left:10px">${fmtTime(jam.time)}</span>` : ''}
         </div>
         ${jam.location ? `<div style="${css({ 'font-size': '12px', color: C.sub })}">📍 ${esc(jam.location)}</div>` : ''}
       </div>
       <div style="${css({ display: 'flex', gap: '6px', flexShrink: 0, 'margin-left': '16px' })}">
         <span style="${css({ background: '#1D2B18', color: C.sage, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${inMembers.length}✓</span>
-        ${mayMembers.length > 0 ? `<span style="${css({ background: '#2B2110', color: C.acc, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${mayMembers.length}?</span>` : ''}
+        ${mayMembers.length > 0 ? `<span style="${css({ background: '#2B1013', color: C.acc, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${mayMembers.length}?</span>` : ''}
         ${outMembers.length > 0 ? `<span style="${css({ background: '#2B1510', color: C.org, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${outMembers.length}✗</span>` : ''}
         ${noMembers.length > 0 ? `<span style="${css({ background: C.raised, color: C.dim, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${noMembers.length}◌</span>` : ''}
       </div>
     </div>
     <div style="${css({ 'padding-left': '4px' })}">${state.members.map(m => jamMemberRow(jam, m, true)).join('')}</div>
     <div style="${css({ display: 'flex', gap: '8px', 'margin-top': '10px', 'padding-left': '4px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
-      <button data-action="confirm-jam" data-id="${jam.id}" style="${css({ background: canConfirm ? C.sage : 'transparent', color: canConfirm ? '#0C0A09' : C.sage, border: `1.5px solid ${C.sage}`, padding: '5px 14px', 'border-radius': '6px', cursor: 'pointer', 'font-size': '12px', 'font-weight': 700, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px' })}">${canConfirm ? '✅ Confirm Jam' : `Confirm (${inMembers.length}/${Math.ceil(total / 2)} votes)`}</button>
+      <button data-action="confirm-jam" data-id="${jam.id}" style="${css({ background: canConfirm ? C.sage : 'transparent', color: canConfirm ? C.bg : C.sage, border: `1.5px solid ${C.sage}`, padding: '5px 14px', 'border-radius': '6px', cursor: 'pointer', 'font-size': '12px', 'font-weight': 700, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px' })}">${canConfirm ? '✅ Confirm Jam' : `Confirm (${inMembers.length}/${Math.ceil(total / 2)} votes)`}</button>
       ${btn('✏ Edit', { action: 'open-edit-jam-modal', data: { id: jam.id }, sm: true })}
       ${btn('Delete', { action: 'delete-jam', data: { id: jam.id }, sm: true, variant: 'danger' })}
     </div>
@@ -792,7 +792,7 @@ function playlistsViewTemplate() {
             <span style="${css({ background: pInfo.bg, color: pInfo.color, padding: '2px 8px', 'border-radius': '4px', 'font-size': '10px', 'font-weight': 700, 'letter-spacing': '0.04em' })}">${pInfo.icon} ${pInfo.name}</span>
             ${member ? `<span style="${css({ display: 'flex', 'align-items': 'center', gap: '4px', 'font-size': '12px', color: C.sub })}"><span style="${css({ width: '7px', height: '7px', 'border-radius': '50%', background: member.color, display: 'inline-block' })}"></span>${esc(member.name)}</span>` : ''}
           </div>
-          <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '16px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '4px' })}">${esc(pl.name)}</div>
+          <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '4px' })}">${esc(pl.name)}</div>
           ${pl.description ? `<div style="${css({ 'font-size': '12px', color: C.sub, 'line-height': 1.5 })}">${esc(pl.description)}</div>` : ''}
         </div>
         <button data-action="delete-playlist" data-id="${pl.id}" style="${css({ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', 'font-size': '14px', 'margin-left': '8px', flexShrink: 0 })}">✕</button>
@@ -843,7 +843,7 @@ function remindersViewTemplate() {
   const list = visible.length === 0 ? empty(remShowDone ? '📝' : '🎉', remShowDone ? 'Nothing completed yet.' : 'All clear!') : visible.map(r => {
     const overdue = !r.done && r.dueDate && r.dueDate < TODAY;
     return `<div style="${css({ background: C.surf, border: `1px solid ${overdue ? C.org + '44' : C.border}`, 'border-radius': '8px', padding: '12px 14px', 'margin-bottom': '8px', display: 'flex', 'align-items': 'flex-start', gap: '12px' })}">
-      <div data-action="toggle-reminder" data-id="${r.id}" style="${css({ width: '20px', height: '20px', 'border-radius': '5px', border: `1.5px solid ${r.done ? C.sage : C.border}`, background: r.done ? C.sage : 'transparent', cursor: 'pointer', flexShrink: 0, 'margin-top': '2px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', transition: 'all 0.15s' })}">${r.done ? `<span style="color:#0C0A09;font-size:11px;font-weight:900">✓</span>` : ''}</div>
+      <div data-action="toggle-reminder" data-id="${r.id}" style="${css({ width: '20px', height: '20px', 'border-radius': '5px', border: `1.5px solid ${r.done ? C.sage : C.border}`, background: r.done ? C.sage : 'transparent', cursor: 'pointer', flexShrink: 0, 'margin-top': '2px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', transition: 'all 0.15s' })}">${r.done ? `<span style="color:${C.bg};font-size:11px;font-weight:900">✓</span>` : ''}</div>
       <div style="${css({ flex: 1, 'min-width': 0 })}">
         <div style="${css({ 'font-size': '14px', color: r.done ? C.dim : C.txt, 'text-decoration': r.done ? 'line-through' : 'none', 'margin-bottom': '5px', 'word-break': 'break-word' })}">${esc(r.text)}</div>
         <div style="${css({ display: 'flex', gap: '8px', 'align-items': 'center', 'flex-wrap': 'wrap' })}">
@@ -884,9 +884,9 @@ function membersViewTemplate() {
   const list = state.members.length === 0 ? empty('👥', 'No members yet.') : `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(190px, 1fr))', gap: '10px' })}">
     ${state.members.map(m => `<div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '16px' })}">
       <div style="${css({ display: 'flex', 'align-items': 'center', gap: '12px', 'margin-bottom': '12px' })}">
-        <div style="${css({ width: '42px', height: '42px', 'border-radius': '50%', background: m.color, display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': "'Oswald', sans-serif", 'font-size': '20px', color: '#0C0A09', 'font-weight': 700, flexShrink: 0 })}">${esc(m.name.charAt(0).toUpperCase())}</div>
+        <div style="${css({ width: '42px', height: '42px', 'border-radius': '50%', background: m.color, display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': "'Bebas Neue', sans-serif", 'font-size': '20px', color: C.bg, 'font-weight': 700, flexShrink: 0 })}">${esc(m.name.charAt(0).toUpperCase())}</div>
         <div>
-          <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '15px', 'font-weight': 500, color: C.txt })}">${esc(m.name)}</div>
+          <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '15px', 'font-weight': 500, color: C.txt })}">${esc(m.name)}</div>
           <div style="${css({ 'font-size': '12px', color: C.sub })}">${esc(m.instrument || '—')}</div>
         </div>
       </div>
@@ -917,12 +917,12 @@ function topBarTemplate() {
   const items = NAV.map(({ id, icon, label }) => {
     const active = state.nav === id;
     const badge = id === 'reminders' && pendingRem > 0 ? `<span style="${css({ background: C.org, color: 'white', 'border-radius': '50%', width: '15px', height: '15px', 'font-size': '9px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-weight': 700, position: 'absolute', top: '2px', right: '2px' })}">${pendingRem}</span>` : '';
-    const openBadge = id === 'songs' && state.songPage && active ? `<span style="${css({ background: C.acc, color: '#0C0A09', 'border-radius': '4px', padding: '1px 5px', 'font-size': '9px', 'font-weight': 700, 'margin-left': '2px' })}">OPEN</span>` : '';
+    const openBadge = id === 'songs' && state.songPage && active ? `<span style="${css({ background: C.acc, color: C.txt, 'border-radius': '4px', padding: '1px 5px', 'font-size': '9px', 'font-weight': 700, 'margin-left': '2px' })}">OPEN</span>` : '';
     return `<button data-action="nav" data-id="${id}" style="${css({ padding: '5px 11px', 'border-radius': '6px', border: 'none', cursor: 'pointer', 'font-size': '13px', 'font-weight': 500, 'white-space': 'nowrap', 'font-family': "'DM Sans', sans-serif", background: active ? C.raised : 'transparent', color: active ? C.acc : C.sub, display: 'flex', 'align-items': 'center', gap: '5px', position: 'relative' })}"><span>${icon}</span><span>${label}</span>${badge}${openBadge}</button>`;
   }).join('');
 
   return `<div style="${css({ background: C.surf, 'border-bottom': `1px solid ${C.border}`, padding: '0 16px', height: '52px', display: 'flex', 'align-items': 'center', gap: '6px', position: 'sticky', top: 0, 'z-index': 40 })}">
-    <div style="${css({ 'font-family': "'Oswald', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}"><span style="font-size:18px">⚡</span> BAND HQ</div>
+    <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}"><span style="font-size:18px">⚡</span> BAND HQ</div>
     <div style="${css({ display: 'flex', gap: '2px', flex: 1, 'overflow-x': 'auto' })}">${items}</div>
     ${SYNC_URL ? `<div style="${css({ display: 'flex', 'align-items': 'center', gap: '6px', flexShrink: 0, 'margin-left': '8px' })}">
       <span id="sync-status" style="${css({ 'font-size': '11px', color: C.dim, 'white-space': 'nowrap' })}">${syncStatusLabel()}</span>
