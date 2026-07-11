@@ -202,8 +202,8 @@ Embed URLs are generated via `getEmbedUrl(url)` — supports Spotify playlists/a
 
 | Section | What it does |
 |---|---|
-| Songs | Song list grid, filter/search, add modal |
-| Song Detail | Full-page song view with teleprompter auto-scroll (play/pause, speed 1–10, progress %), plus a side panel to pick and play any saved playlist while you practice |
+| Songs | Song list grid, filter/search, add modal. Shares the playlist player side panel (see below) so you can pick a reference playlist before opening a song |
+| Song Detail | Full-page song view with teleprompter auto-scroll (play/pause, speed 1–10, progress %). The playlist side panel persists across the whole Songs section — switching Lyrics/Tabs/Notes or navigating between songs never interrupts playback, since only the tab content re-renders, not the panel |
 | Setlists | Setlist CRUD, song picker, reorder with ▲▼ |
 | Jams | Three sections: Open / Proposed / Past (all collapsible), availability voting, optional start/end time |
 | Playlists | Per-member playlists with iframe embed toggle and an "Open Full Player" link (new tab, full-size — useful for Apple Music where the inline embed is cramped) |
