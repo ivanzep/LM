@@ -2,6 +2,7 @@
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 const fmtDate = (d) => { if (!d) return '—'; const dt = new Date(d + 'T12:00:00'); return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); };
 const fmtTime = (t) => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${h > 12 ? h - 12 : h || 12}:${String(m).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`; };
+const fmtTimeRange = (jam) => { if (!jam.time) return ''; return jam.endTime ? `${fmtTime(jam.time)} – ${fmtTime(jam.endTime)}` : fmtTime(jam.time); };
 const TODAY = new Date().toISOString().slice(0, 10);
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -109,12 +110,12 @@ const S_SETLISTS = [
 ];
 
 const S_JAMS = [
-  { id:'J0', date:'2026-06-14', time:'16:00', location:"Ivan's backyard", status:'confirmed', notes:'First outdoor jam of the summer. Ran through 3 songs.', availability:{M1:'in',M2:'in',M3:'in',M4:'maybe'} },
-  { id:'J00', date:'2026-05-30', time:'19:00', location:"Alex's garage", status:'confirmed', notes:'Worked on Groove Machine arrangement.', availability:{M1:'in',M2:'in',M3:'out',M4:'in'} },
-  { id:'J1', date:'2026-07-04', time:'17:00', location:"Ivan's backyard", status:'confirmed', notes:'Cookout at 3pm, play at 5pm. Bring PA, DI box, extra cables.', availability:{M1:'in',M2:'in',M3:'maybe',M4:'in'} },
-  { id:'J2', date:'2026-07-18', time:'19:00', location:"Alex's garage", status:'proposed', notes:'Full run-through of the July 4th setlist. Bring lyric sheets.', availability:{M1:'in',M2:'in',M3:'in',M4:'out'} },
-  { id:'J3', date:'2026-08-02', time:'14:00', location:'Practice Studio — Room B', status:'proposed', notes:'Record scratch tracks for new material. 4 hours booked.', availability:{M1:'in',M2:'maybe',M3:'in',M4:'in'} },
-  { id:'J4', date:'2026-08-09', time:'18:00', location:"Sam's place", status:'proposed', notes:'Casual hangout jam — no pressure, just vibe.', availability:{M1:'maybe',M2:'in',M3:'in',M4:'maybe'} },
+  { id:'J0', date:'2026-06-14', time:'16:00', endTime:'19:00', location:"Ivan's backyard", status:'confirmed', notes:'First outdoor jam of the summer. Ran through 3 songs.', availability:{M1:'in',M2:'in',M3:'in',M4:'maybe'} },
+  { id:'J00', date:'2026-05-30', time:'19:00', endTime:'21:30', location:"Alex's garage", status:'confirmed', notes:'Worked on Groove Machine arrangement.', availability:{M1:'in',M2:'in',M3:'out',M4:'in'} },
+  { id:'J1', date:'2026-07-04', time:'17:00', endTime:'20:00', location:"Ivan's backyard", status:'confirmed', notes:'Cookout at 3pm, play at 5pm. Bring PA, DI box, extra cables.', availability:{M1:'in',M2:'in',M3:'maybe',M4:'in'} },
+  { id:'J2', date:'2026-07-18', time:'19:00', endTime:'21:00', location:"Alex's garage", status:'proposed', notes:'Full run-through of the July 4th setlist. Bring lyric sheets.', availability:{M1:'in',M2:'in',M3:'in',M4:'out'} },
+  { id:'J3', date:'2026-08-02', time:'14:00', endTime:'18:00', location:'Practice Studio — Room B', status:'proposed', notes:'Record scratch tracks for new material. 4 hours booked.', availability:{M1:'in',M2:'maybe',M3:'in',M4:'in'} },
+  { id:'J4', date:'2026-08-09', time:'18:00', endTime:'', location:"Sam's place", status:'proposed', notes:'Casual hangout jam — no pressure, just vibe.', availability:{M1:'maybe',M2:'in',M3:'in',M4:'maybe'} },
 ];
 
 const S_REMINDERS = [
@@ -382,7 +383,7 @@ function readSongForm() {
 }
 
 // ── Song Detail Page (teleprompter) ────────────────────────────
-let sdTab = 'lyrics', sdPlaying = false, sdSpeed = 3, sdInterval = null;
+let sdTab = 'lyrics', sdPlaying = false, sdSpeed = 3, sdInterval = null, sdPlaylistId = '';
 
 function stopTeleprompterInterval() { if (sdInterval) { clearInterval(sdInterval); sdInterval = null; } }
 function openSong(song) { state.songPage = song; sdTab = 'lyrics'; sdPlaying = false; sdSpeed = 3; stopTeleprompterInterval(); render(); }
@@ -447,6 +448,40 @@ function saveSong(mode, id) {
 }
 function deleteSong(id) { updSongs(state.songs.filter(s => s.id !== id)); render(); }
 
+function songDetailPlaylistPanel() {
+  const options = [{ value: '', label: 'Select a playlist…' }, ...state.playlists.map(pl => {
+    const member = state.members.find(m => m.id === pl.memberId);
+    return { value: pl.id, label: member ? `${pl.name} — ${member.name}` : pl.name };
+  })];
+  const selected = state.playlists.find(pl => pl.id === sdPlaylistId);
+  const platform = selected ? detectPlatform(selected.url) : null;
+  const pInfo = platform ? PINFO[platform] : null;
+  const embedUrl = selected ? getEmbedUrl(selected.url) : null;
+  const embedH = platform === 'spotify' ? 352 : platform === 'youtube' ? 240 : platform === 'apple' ? 450 : 300;
+
+  return `<div style="${css({ width: '300px', flexShrink: 0 })}">
+    <div style="${css({ position: 'sticky', top: '70px' })}">
+      <div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '14px' })}">
+        ${lbl('Playlist Player')}
+        <select id="sd-playlist-select" style="${css({ background: C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '13px', padding: '8px 10px', outline: 'none', cursor: 'pointer', width: '100%', 'margin-top': '6px' })}">
+          ${options.map(o => `<option value="${esc(o.value)}" ${o.value === sdPlaylistId ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+        </select>
+        ${selected ? `
+          <div style="${css({ 'margin-top': '12px' })}">
+            ${embedUrl
+              ? `<iframe src="${esc(embedUrl)}" style="${css({ width: '100%', border: 'none', 'border-radius': '8px', height: embedH + 'px', display: 'block' })}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title="${esc(selected.name)}"></iframe>`
+              : `<div style="${css({ 'font-size': '12px', color: C.dim, padding: '20px 0', 'text-align': 'center' })}">No embeddable player for this link.</div>`}
+            <div style="${css({ display: 'flex', gap: '6px', 'margin-top': '10px', 'flex-wrap': 'wrap' })}">
+              <a href="${esc(selected.url)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px', padding: '5px 10px', background: pInfo.bg, border: `1px solid ${pInfo.color}44`, 'border-radius': '6px', color: pInfo.color, 'font-size': '11px', 'font-weight': 600, 'text-decoration': 'none' })}">${icon('link', 12)} Open in ${pInfo.name}</a>
+              ${embedUrl ? `<a href="${esc(embedUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px', padding: '5px 10px', background: 'transparent', border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.sub, 'font-size': '11px', 'font-weight': 600, 'text-decoration': 'none' })}">↗ Full Player</a>` : ''}
+            </div>
+          </div>
+        ` : `<div style="${css({ 'font-size': '12px', color: C.dim, 'margin-top': '12px', 'text-align': 'center', padding: '20px 0' })}">Pick a playlist to play while you practice.</div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
 function songDetailTemplate(song) {
   const tabSite = getTabSiteName(song.tabUrl);
   const tabsRow = ['lyrics', 'tabs', 'notes'].map(t => `<button data-action="switch-song-tab" data-tab="${t}" style="${css({ padding: '6px 18px', 'border-radius': '6px', border: 'none', background: sdTab === t ? C.raised : 'transparent', color: sdTab === t ? C.txt : C.sub, 'font-size': '13px', 'font-weight': 600, cursor: 'pointer', 'font-family': "'DM Sans', sans-serif", 'text-transform': 'capitalize' })}">${t}</button>`).join('');
@@ -458,7 +493,8 @@ function songDetailTemplate(song) {
 
   const tagsHTML = song.tags ? `<div style="${css({ display: 'flex', gap: '4px', 'flex-wrap': 'wrap', 'margin-bottom': '10px' })}">${song.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `<span style="${css({ background: C.raised, color: C.dim, padding: '1px 7px', 'border-radius': '3px', 'font-size': '10px', border: `1px solid ${C.border}` })}">${esc(t)}</span>`).join('')}</div>` : '';
 
-  return `<div>
+  return `<div style="${css({ display: 'flex', gap: '20px', 'flex-wrap': 'wrap', 'align-items': 'flex-start' })}">
+  <div style="${css({ flex: 1, 'min-width': '320px' })}">
     <div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '20px' })}">
       <button data-action="back-to-songs" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '13px', 'font-weight': 600, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px', padding: 0 })}">← Songs</button>
       ${btn('✏ Edit Song', { action: 'open-edit-song-modal', data: { id: song.id } })}
@@ -493,6 +529,8 @@ function songDetailTemplate(song) {
         </div>
       </div>
     </div>
+  </div>
+  ${songDetailPlaylistPanel()}
   </div>`;
 }
 
@@ -644,11 +682,12 @@ function openEditJamModal(id) { state.modal = { type: 'editJam', id }; render();
 function saveJam(mode, id) {
   const date = document.getElementById('jf-date').value;
   const time = document.getElementById('jf-time').value;
+  const endTime = document.getElementById('jf-endTime').value;
   const location = document.getElementById('jf-location').value;
   const notes = document.getElementById('jf-notes').value;
   if (!date) return;
-  if (mode === 'add') updJams([...state.jams, { date, time, location, notes, id: uid(), status: 'proposed', availability: {} }]);
-  else updJams(state.jams.map(j => j.id === id ? { ...j, date, time, location, notes } : j));
+  if (mode === 'add') updJams([...state.jams, { date, time, endTime, location, notes, id: uid(), status: 'proposed', availability: {} }]);
+  else updJams(state.jams.map(j => j.id === id ? { ...j, date, time, endTime, location, notes } : j));
   state.modal = null;
   render();
 }
@@ -683,7 +722,7 @@ function jamCardTemplate(jam, variant) {
       <div style="${css({ flex: 1, 'min-width': 0 })}">
         <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 500, color: variant === 'past' ? C.sub : C.txt, 'letter-spacing': '0.02em', display: 'flex', 'align-items': 'center', gap: '8px', 'flex-wrap': 'wrap' })}">
           ${fmtDate(jam.date)}
-          ${jam.time ? `<span style="${css({ color: variant === 'past' ? C.dim : C.acc, 'font-size': '13px', 'font-weight': 400, 'font-family': "'DM Sans', sans-serif" })}">${fmtTime(jam.time)}</span>` : ''}
+          ${jam.time ? `<span style="${css({ color: variant === 'past' ? C.dim : C.acc, 'font-size': '13px', 'font-weight': 400, 'font-family': "'DM Sans', sans-serif" })}">${fmtTimeRange(jam)}</span>` : ''}
           ${jam.location ? `<span style="${css({ color: C.dim, 'font-size': '13px', 'font-weight': 400, 'font-family': "'DM Sans', sans-serif" })}">· ${esc(jam.location)}</span>` : ''}
         </div>
       </div>
@@ -723,7 +762,7 @@ function proposedJamBlockTemplate(jam) {
     <div style="${css({ background: C.surf, border: `1px solid ${C.acc}44`, 'border-left': `3px solid ${C.acc}`, 'border-radius': '10px', padding: '13px 16px', display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '6px' })}">
       <div>
         <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '20px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '3px' })}">
-          ${fmtDate(jam.date)}${jam.time ? `<span style="color:${C.acc};font-size:15px;font-weight:400;font-family:'DM Sans', sans-serif;margin-left:10px">${fmtTime(jam.time)}</span>` : ''}
+          ${fmtDate(jam.date)}${jam.time ? `<span style="color:${C.acc};font-size:15px;font-weight:400;font-family:'DM Sans', sans-serif;margin-left:10px">${fmtTimeRange(jam)}</span>` : ''}
         </div>
         ${jam.location ? `<div style="${css({ 'font-size': '12px', color: C.sub })}">${icon('pin', 13)} ${esc(jam.location)}</div>` : ''}
       </div>
@@ -804,7 +843,7 @@ function playlistsViewTemplate() {
     const pInfo = PINFO[platform];
     const embedUrl = getEmbedUrl(pl.url);
     const isExpanded = plShowEmbed[pl.id];
-    const embedH = platform === 'spotify' ? 352 : platform === 'youtube' ? 240 : 175;
+    const embedH = platform === 'spotify' ? 352 : platform === 'youtube' ? 240 : platform === 'apple' ? 450 : 175;
 
     return `<div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '16px', 'margin-bottom': '10px' })}">
       <div style="${css({ display: 'flex', 'justify-content': 'space-between', 'align-items': 'flex-start', 'margin-bottom': '10px' })}">
@@ -821,6 +860,7 @@ function playlistsViewTemplate() {
       <div style="${css({ display: 'flex', gap: '8px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
         <a href="${esc(pl.url)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px', padding: '5px 12px', background: pInfo.bg, border: `1px solid ${pInfo.color}44`, 'border-radius': '6px', color: pInfo.color, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">${icon('link', 13)} Open in ${pInfo.name}</a>
         ${embedUrl ? btn(isExpanded ? '▲ Hide Player' : '▶ Show Player', { action: 'toggle-playlist-embed', data: { id: pl.id }, sm: true }) : ''}
+        ${embedUrl ? `<a href="${esc(embedUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px', padding: '5px 12px', background: 'transparent', border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.sub, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">↗ Open Full Player</a>` : ''}
       </div>
       ${isExpanded && embedUrl ? `<div style="${css({ 'margin-top': '14px' })}">
         <iframe src="${esc(embedUrl)}" style="${css({ width: '100%', border: 'none', 'border-radius': '8px', height: embedH + 'px', display: 'block' })}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title="${esc(pl.name)}"></iframe>
@@ -927,6 +967,8 @@ const NAV = [
   { id: 'setlists', icon: 'list', label: 'Setlists' },
   { id: 'jams', icon: 'skull', label: 'Jams' },
   { id: 'playlists', icon: 'flame', label: 'Playlists' },
+];
+const MENU_NAV = [
   { id: 'reminders', icon: 'bell', label: 'Reminders' },
   { id: 'members', icon: 'people', label: 'Members' },
 ];
@@ -937,21 +979,28 @@ function topBarTemplate() {
   const pendingRem = state.reminders.filter(r => !r.done).length;
   const items = NAV.map(({ id, icon: iconName, label }) => {
     const active = state.nav === id;
-    const badge = id === 'reminders' && pendingRem > 0 ? `<span style="${css({ background: C.org, color: 'white', 'border-radius': '50%', width: '15px', height: '15px', 'font-size': '9px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-weight': 700, position: 'absolute', top: '2px', right: '2px' })}">${pendingRem}</span>` : '';
     const openBadge = id === 'songs' && state.songPage && active ? `<span style="${css({ background: C.acc, color: C.txt, 'border-radius': '4px', padding: '1px 5px', 'font-size': '9px', 'font-weight': 700, 'margin-left': '2px' })}">OPEN</span>` : '';
-    return `<button data-action="nav" data-id="${id}" style="${css({ padding: '5px 11px', 'border-radius': '6px', border: 'none', cursor: 'pointer', 'font-size': '13px', 'font-weight': 500, 'white-space': 'nowrap', 'font-family': "'DM Sans', sans-serif", background: active ? C.raised : 'transparent', color: active ? C.acc : C.sub, display: 'flex', 'align-items': 'center', gap: '5px', position: 'relative' })}">${icon(iconName, 15)}<span>${label}</span>${badge}${openBadge}</button>`;
+    return `<button data-action="nav" data-id="${id}" style="${css({ padding: '5px 11px', 'border-radius': '6px', border: 'none', cursor: 'pointer', 'font-size': '13px', 'font-weight': 500, 'white-space': 'nowrap', 'font-family': "'DM Sans', sans-serif", background: active ? C.raised : 'transparent', color: active ? C.acc : C.sub, display: 'flex', 'align-items': 'center', gap: '5px', position: 'relative' })}">${icon(iconName, 15)}<span>${label}</span>${openBadge}</button>`;
+  }).join('');
+
+  const menuItems = MENU_NAV.map(({ id, icon: iconName, label }) => {
+    const active = state.nav === id;
+    const count = id === 'reminders' && pendingRem > 0 ? `<span style="${css({ background: C.org, color: 'white', 'border-radius': '10px', padding: '0 6px', 'font-size': '10px', 'font-weight': 700, 'margin-left': 'auto' })}">${pendingRem}</span>` : '';
+    return `<button data-action="nav" data-id="${id}" style="${css({ display: 'flex', 'align-items': 'center', gap: '8px', width: '100%', background: active ? C.raised : 'none', border: 'none', color: active ? C.acc : C.txt, cursor: 'pointer', 'font-size': '13px', 'font-family': "'DM Sans', sans-serif", padding: '8px 10px', 'border-radius': '5px', 'text-align': 'left' })}">${icon(iconName, 15)}<span>${label}</span>${count}</button>`;
   }).join('');
 
   return `<div style="${css({ background: C.surf, 'border-bottom': `1px solid ${C.border}`, padding: '0 16px', height: '52px', display: 'flex', 'align-items': 'center', gap: '6px', position: 'sticky', top: 0, 'z-index': 40 })}">
-    <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}">${icon('lightning', 19)} LUCKY MACHOS</div>
+    <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}">LUCKY MACHOS</div>
     <div style="${css({ display: 'flex', gap: '2px', flex: 1, 'overflow-x': 'auto' })}">${items}</div>
     ${SYNC_URL ? `<div style="${css({ display: 'flex', 'align-items': 'center', gap: '6px', flexShrink: 0, 'margin-left': '8px' })}">
       <span id="sync-status" style="${css({ 'font-size': '11px', color: C.dim, 'white-space': 'nowrap' })}">${syncStatusLabel()}</span>
       <button data-action="sync-refresh" title="Reload from Google Sheet" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', padding: '4px', display: 'flex', 'align-items': 'center' })}">${icon('refresh', 15)}</button>
     </div>` : ''}
     <div id="hamburger-wrapper" style="${css({ position: 'relative', flexShrink: 0, 'margin-left': '8px' })}">
-      <button data-action="toggle-menu" title="Menu" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '17px', padding: '4px 6px' })}">☰</button>
-      ${state.ui.menuOpen ? `<div style="${css({ position: 'absolute', top: '100%', right: 0, background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '4px', 'min-width': '150px', 'z-index': 60, 'box-shadow': '0 8px 24px #00000066' })}">
+      <button data-action="toggle-menu" title="Menu" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '17px', padding: '4px 6px', position: 'relative' })}">☰${pendingRem > 0 ? `<span style="${css({ position: 'absolute', top: '2px', right: '2px', width: '7px', height: '7px', 'border-radius': '50%', background: C.org })}"></span>` : ''}</button>
+      ${state.ui.menuOpen ? `<div style="${css({ position: 'absolute', top: '100%', right: 0, background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '4px', 'min-width': '170px', 'z-index': 60, 'box-shadow': '0 8px 24px #00000066' })}">
+        ${menuItems}
+        <div style="${css({ height: '1px', background: C.border, margin: '4px 6px' })}"></div>
         <button data-action="open-setup-modal" style="${css({ display: 'flex', 'align-items': 'center', gap: '8px', width: '100%', background: 'none', border: 'none', color: C.txt, cursor: 'pointer', 'font-size': '13px', 'font-family': "'DM Sans', sans-serif", padding: '8px 10px', 'border-radius': '5px', 'text-align': 'left' })}">⚙ Setup</button>
       </div>` : ''}
     </div>
@@ -1001,12 +1050,13 @@ function modalTemplate() {
   }
   if (m.type === 'addJam' || m.type === 'editJam') {
     const isAdd = m.type === 'addJam';
-    const jam = isAdd ? { date: '', time: '', location: '', notes: '' } : state.jams.find(j => j.id === m.id);
+    const jam = isAdd ? { date: '', time: '', endTime: '', location: '', notes: '' } : state.jams.find(j => j.id === m.id);
     return modalWrap(isAdd ? 'Propose a Date' : 'Edit Jam', `
       ${isAdd ? `<div style="${css({ 'font-size': '13px', color: C.sub, 'margin-bottom': '16px', background: C.raised, 'border-radius': '6px', padding: '8px 12px', 'line-height': 1.6 })}">${icon('bulb', 14)} Propose a date and the band votes In / Maybe / Out. Confirm it once there's enough interest.</div>` : ''}
+      <div style="${css({ 'margin-bottom': '12px' })}">${lbl('Date *')}${inputHTML({ id: 'jf-date', value: jam.date, type: 'date' })}</div>
       <div style="${css({ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '12px', 'margin-bottom': '12px' })}">
-        <div>${lbl('Date *')}${inputHTML({ id: 'jf-date', value: jam.date, type: 'date' })}</div>
-        <div>${lbl('Time')}${inputHTML({ id: 'jf-time', value: jam.time || '', type: 'time' })}</div>
+        <div>${lbl('Start Time')}${inputHTML({ id: 'jf-time', value: jam.time || '', type: 'time' })}</div>
+        <div>${lbl('End Time')}${inputHTML({ id: 'jf-endTime', value: jam.endTime || '', type: 'time' })}</div>
       </div>
       <div style="${css({ 'margin-bottom': '12px' })}">${lbl('Location')}${inputHTML({ id: 'jf-location', value: jam.location || '', placeholder: "Ivan's backyard, Studio B…" })}</div>
       <div style="${css({ 'margin-bottom': '20px' })}">${lbl('Notes')}${taHTML({ id: 'jf-notes', value: jam.notes || '', placeholder: 'What to bring, goals, vibe…', rows: 3 })}</div>
@@ -1081,9 +1131,10 @@ function modalTemplate() {
 }
 
 function appTemplate() {
+  const wide = state.nav === 'songs' && state.songPage;
   return `<div style="${css({ 'min-height': '100vh', background: C.bg, color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '14px' })}">
     ${topBarTemplate()}
-    <div style="${css({ 'max-width': '1000px', margin: '0 auto', padding: '22px 16px' })}">${contentTemplate()}</div>
+    <div style="${css({ 'max-width': wide ? '1320px' : '1000px', margin: '0 auto', padding: '22px 16px' })}">${contentTemplate()}</div>
   </div>
   ${state.modal ? modalTemplate() : ''}`;
 }
@@ -1196,6 +1247,13 @@ document.addEventListener('input', (e) => {
     if (hidden) hidden.value = t.value;
     document.querySelectorAll('.color-swatch').forEach(s => { s.style.borderColor = 'transparent'; });
     return;
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'sd-playlist-select') {
+    sdPlaylistId = e.target.value;
+    render();
   }
 });
 

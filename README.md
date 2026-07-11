@@ -144,7 +144,8 @@ const C = {
 {
   id: string,
   date: string,          // ISO date YYYY-MM-DD
-  time: string,          // HH:MM (24h)
+  time: string,          // HH:MM (24h) — start time
+  endTime: string,       // HH:MM (24h) — optional
   location: string,
   notes: string,
   status: 'proposed' | 'confirmed',
@@ -202,12 +203,12 @@ Embed URLs are generated via `getEmbedUrl(url)` — supports Spotify playlists/a
 | Section | What it does |
 |---|---|
 | Songs | Song list grid, filter/search, add modal |
-| Song Detail | Full-page song view with teleprompter auto-scroll (play/pause, speed 1–10, progress %) |
+| Song Detail | Full-page song view with teleprompter auto-scroll (play/pause, speed 1–10, progress %), plus a side panel to pick and play any saved playlist while you practice |
 | Setlists | Setlist CRUD, song picker, reorder with ▲▼ |
-| Jams | Three sections: Open / Proposed / Past (all collapsible), availability voting |
-| Playlists | Per-member playlists with iframe embed toggle |
-| Reminders | Priority-sorted checklist with overdue detection |
-| Members | Band roster with color picker |
+| Jams | Three sections: Open / Proposed / Past (all collapsible), availability voting, optional start/end time |
+| Playlists | Per-member playlists with iframe embed toggle and an "Open Full Player" link (new tab, full-size — useful for Apple Music where the inline embed is cramped) |
+| Reminders | Priority-sorted checklist with overdue detection — accessed from the ☰ menu |
+| Members | Band roster with color picker — accessed from the ☰ menu |
 
 ---
 
