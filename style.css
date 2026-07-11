@@ -1,7 +1,7 @@
 * , *::before, *::after { box-sizing: border-box; }
 html, body, #root { margin: 0; padding: 0; min-height: 100vh; }
 body {
-  background: #0C0A09;
+  background: #000000;
   font-family: 'DM Sans', sans-serif;
 }
 input[type="date"]::-webkit-calendar-picker-indicator,
@@ -9,5 +9,5 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
 input[type="range"] { cursor: pointer; }
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #332B22; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #2C2C2C; border-radius: 3px; }
 button { font-family: inherit; }
