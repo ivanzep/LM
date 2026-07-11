@@ -388,7 +388,26 @@ let sdTab = 'lyrics', sdPlaying = false, sdSpeed = 3, sdInterval = null, sdPlayl
 function stopTeleprompterInterval() { if (sdInterval) { clearInterval(sdInterval); sdInterval = null; } }
 function openSong(song) { state.songPage = song; sdTab = 'lyrics'; sdPlaying = false; sdSpeed = 3; stopTeleprompterInterval(); render(); }
 function closeSong() { stopTeleprompterInterval(); state.songPage = null; render(); }
-function switchSongTab(t) { sdTab = t; sdPlaying = false; stopTeleprompterInterval(); render(); }
+function switchSongTab(t) {
+  sdTab = t;
+  sdPlaying = false;
+  stopTeleprompterInterval();
+  // Targeted DOM update (not a full render()) so the playlist sidebar's
+  // iframe isn't recreated and reset when just switching lyrics/tabs/notes.
+  const box = document.getElementById('sd-scrollbox');
+  if (box && state.songPage) {
+    box.innerHTML = songDetailContentHTML(state.songPage);
+    box.style.background = sdTab === 'tabs' ? '#080808' : C.surf;
+    box.scrollTop = 0;
+  }
+  document.querySelectorAll('[data-action="switch-song-tab"]').forEach(b => {
+    const active = b.dataset.tab === sdTab;
+    b.style.background = active ? C.raised : 'transparent';
+    b.style.color = active ? C.txt : C.sub;
+  });
+  updatePlayButtonUI();
+  updateProgressUI(0);
+}
 
 function updatePlayButtonUI() {
   const b = document.getElementById('sd-play-btn');
@@ -482,19 +501,20 @@ function songDetailPlaylistPanel() {
   </div>`;
 }
 
+function songDetailContentHTML(song) {
+  if (sdTab === 'lyrics') return `<div style="${css({ 'white-space': 'pre-wrap', 'font-size': '15px', color: C.sub, 'line-height': 2.0, 'font-family': "'DM Sans', sans-serif" })}">${song.lyrics ? esc(song.lyrics) : `<em style="color:${C.dim}">No lyrics yet — click Edit Song to add.</em>`}</div>`;
+  if (sdTab === 'tabs') return `<div style="${css({ 'font-family': "'JetBrains Mono', monospace", 'font-size': '13px', color: C.acc, 'white-space': 'pre', 'line-height': 1.8 })}">${song.tabs ? esc(song.tabs) : `<span style="color:${C.dim};font-family:'DM Sans', sans-serif;font-style:italic">No tabs yet — click Edit Song to add.</span>`}</div>`;
+  return `<div style="${css({ 'font-size': '15px', color: C.sub, 'line-height': 1.8, 'white-space': 'pre-wrap' })}">${song.notes ? esc(song.notes) : `<em style="color:${C.dim}">No notes yet — click Edit Song to add.</em>`}</div>`;
+}
+
 function songDetailTemplate(song) {
   const tabSite = getTabSiteName(song.tabUrl);
   const tabsRow = ['lyrics', 'tabs', 'notes'].map(t => `<button data-action="switch-song-tab" data-tab="${t}" style="${css({ padding: '6px 18px', 'border-radius': '6px', border: 'none', background: sdTab === t ? C.raised : 'transparent', color: sdTab === t ? C.txt : C.sub, 'font-size': '13px', 'font-weight': 600, cursor: 'pointer', 'font-family': "'DM Sans', sans-serif", 'text-transform': 'capitalize' })}">${t}</button>`).join('');
-
-  let content;
-  if (sdTab === 'lyrics') content = `<div style="${css({ 'white-space': 'pre-wrap', 'font-size': '15px', color: C.sub, 'line-height': 2.0, 'font-family': "'DM Sans', sans-serif" })}">${song.lyrics ? esc(song.lyrics) : `<em style="color:${C.dim}">No lyrics yet — click Edit Song to add.</em>`}</div>`;
-  else if (sdTab === 'tabs') content = `<div style="${css({ 'font-family': "'JetBrains Mono', monospace", 'font-size': '13px', color: C.acc, 'white-space': 'pre', 'line-height': 1.8 })}">${song.tabs ? esc(song.tabs) : `<span style="color:${C.dim};font-family:'DM Sans', sans-serif;font-style:italic">No tabs yet — click Edit Song to add.</span>`}</div>`;
-  else content = `<div style="${css({ 'font-size': '15px', color: C.sub, 'line-height': 1.8, 'white-space': 'pre-wrap' })}">${song.notes ? esc(song.notes) : `<em style="color:${C.dim}">No notes yet — click Edit Song to add.</em>`}</div>`;
+  const content = songDetailContentHTML(song);
 
   const tagsHTML = song.tags ? `<div style="${css({ display: 'flex', gap: '4px', 'flex-wrap': 'wrap', 'margin-bottom': '10px' })}">${song.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `<span style="${css({ background: C.raised, color: C.dim, padding: '1px 7px', 'border-radius': '3px', 'font-size': '10px', border: `1px solid ${C.border}` })}">${esc(t)}</span>`).join('')}</div>` : '';
 
-  return `<div style="${css({ display: 'flex', gap: '20px', 'flex-wrap': 'wrap', 'align-items': 'flex-start' })}">
-  <div style="${css({ flex: 1, 'min-width': '320px' })}">
+  return `<div>
     <div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '20px' })}">
       <button data-action="back-to-songs" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '13px', 'font-weight': 600, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px', padding: 0 })}">← Songs</button>
       ${btn('✏ Edit Song', { action: 'open-edit-song-modal', data: { id: song.id } })}
@@ -529,8 +549,6 @@ function songDetailTemplate(song) {
         </div>
       </div>
     </div>
-  </div>
-  ${songDetailPlaylistPanel()}
   </div>`;
 }
 
@@ -1008,7 +1026,13 @@ function topBarTemplate() {
 }
 
 function contentTemplate() {
-  if (state.nav === 'songs') return state.songPage ? songDetailTemplate(state.songPage) : songsViewTemplate();
+  if (state.nav === 'songs') {
+    const main = state.songPage ? songDetailTemplate(state.songPage) : songsViewTemplate();
+    return `<div style="${css({ display: 'flex', gap: '20px', 'flex-wrap': 'wrap', 'align-items': 'flex-start' })}">
+      <div style="${css({ flex: 1, 'min-width': '320px' })}">${main}</div>
+      ${songDetailPlaylistPanel()}
+    </div>`;
+  }
   if (state.nav === 'setlists') return setlistsViewTemplate();
   if (state.nav === 'jams') return jamsViewTemplate();
   if (state.nav === 'playlists') return playlistsViewTemplate();
@@ -1131,7 +1155,7 @@ function modalTemplate() {
 }
 
 function appTemplate() {
-  const wide = state.nav === 'songs' && state.songPage;
+  const wide = state.nav === 'songs';
   return `<div style="${css({ 'min-height': '100vh', background: C.bg, color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '14px' })}">
     ${topBarTemplate()}
     <div style="${css({ 'max-width': wide ? '1320px' : '1000px', margin: '0 auto', padding: '22px 16px' })}">${contentTemplate()}</div>
