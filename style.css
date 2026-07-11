@@ -1,0 +1,13 @@
+* , *::before, *::after { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; min-height: 100vh; }
+body {
+  background: #0C0A09;
+  font-family: 'DM Sans', sans-serif;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+input[type="range"] { cursor: pointer; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #332B22; border-radius: 3px; }
+button { font-family: inherit; }
