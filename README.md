@@ -1,6 +1,6 @@
-# ⚡ Band HQ
+# Lucky Machos
 
-Personal band management tool. Tracks songs, setlists, jam scheduling (with availability voting), member playlists, and reminders.
+Band management tool for Lucky Machos. Tracks songs, setlists, jam scheduling (with availability voting), member playlists, and reminders.
 
 ---
 
@@ -247,7 +247,7 @@ To reset to seed data: open DevTools → Application → Local Storage → clear
 ## File Structure
 
 ```
-band-hq/
+lucky-machos/
 ├── index.html   ← HTML shell + Google Fonts link tags
 ├── style.css    ← global resets, scrollbar styling
 ├── app.js       ← entire application: state, rendering, all views
