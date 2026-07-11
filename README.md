@@ -26,6 +26,23 @@ The site will be served at `https://ivanzep.github.io/LM/`. All asset references
 
 ---
 
+## Cross-Device Sync (optional, via Google Sheets)
+
+By default, all data lives in `localStorage` — private to one browser/device. To share live data across bandmates' devices, wire up a Google Sheet as a lightweight backend:
+
+1. Create a new Google Sheet. Leave it otherwise empty — a `Data` tab is created automatically on first save.
+2. In the Sheet, go to **Extensions → Apps Script**, delete the placeholder code, and paste in the contents of [`apps-script/Code.gs`](apps-script/Code.gs).
+3. Click **Deploy → New deployment** → type **Web app**. Set **Execute as: Me** and **Who has access: Anyone**, then deploy and authorize it.
+4. Copy the deployment's Web App URL (ends in `/exec`).
+5. In `app.js`, find `const SYNC_URL = '';` (near the `updSongs`/`updSetlists`/etc. functions) and paste the URL in between the quotes.
+6. Commit and push — the next deploy will show a ☁ sync indicator and 🔄 refresh button in the top bar.
+
+Once enabled: every add/edit/delete pushes that collection (songs, setlists, jams, members, reminders, playlists) as a JSON blob to its own row in the `Data` sheet tab, and the app fetches the full dataset from the Sheet on load. Click 🔄 anytime to pull in changes made on another device. This is last-write-wins (no real-time collaboration or conflict resolution) and each save/load is a network round-trip of a few hundred ms to a couple seconds — fine for a personal band tool, not built for heavy concurrent editing.
+
+`localStorage` still updates on every change too, so the app keeps working offline or if the Sheet is unreachable — it just won't be in sync with other devices until the network call succeeds.
+
+---
+
 ## Tech Stack
 
 | Layer | Choice |
