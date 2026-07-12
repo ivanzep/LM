@@ -619,7 +619,7 @@ function songDetailTemplate(song) {
 
   return `<div>
     <div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '20px' })}">
-      <button data-action="back-to-songs" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '13px', 'font-weight': 600, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px', padding: 0 })}">← Songs</button>
+      <button data-action="back-to-songs" style="${css({ background: 'none', border: 'none', color: C.txt, cursor: 'pointer', 'font-family': "'Bebas Neue', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em', display: 'flex', 'align-items': 'center', gap: '6px', padding: 0 })}">← Songs</button>
       ${btn('✏ Edit Song', { action: 'open-edit-song-modal', data: { id: song.id } })}
     </div>
     <div style="${css({ 'margin-bottom': '18px', 'padding-bottom': '18px', 'border-bottom': `1px solid ${C.border}` })}">
