@@ -1154,7 +1154,23 @@ const MENU_NAV = [
   { id: 'members', icon: 'people', label: 'Members' },
 ];
 
-function navClick(id) { state.nav = id; state.songPage = null; sdPlaying = false; stopTeleprompterInterval(); render(); }
+const NAV_IDS = [...NAV, ...MENU_NAV].map(n => n.id);
+function navFromHash() {
+  const h = location.hash.slice(1);
+  return NAV_IDS.includes(h) ? h : 'songs';
+}
+function goToNav(id) {
+  state.nav = id;
+  state.songPage = null;
+  sdPlaying = false;
+  stopTeleprompterInterval();
+  render();
+}
+function navClick(id) {
+  if (location.hash.slice(1) === id) { goToNav(id); return; }
+  location.hash = id; // triggers the hashchange listener below, which calls goToNav
+}
+window.addEventListener('hashchange', () => goToNav(navFromHash()));
 
 function topBarTemplate() {
   const pendingRem = state.reminders.filter(r => !r.done).length;
@@ -1444,5 +1460,7 @@ document.addEventListener('change', (e) => {
 
 // ── Init ──────────────────────────────────────────────────────
 loadPersisted();
+state.nav = navFromHash();
+if (!location.hash) history.replaceState(null, '', '#' + state.nav); // reflect default without an extra hashchange render
 render();
 if (SYNC_URL) fetchRemote().then(ok => { if (ok) render(); });
