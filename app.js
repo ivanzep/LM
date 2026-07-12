@@ -168,7 +168,7 @@ const state = {
 // Default Google Apps Script Web App URL (see apps-script/Code.gs and
 // README). Overridable at runtime via the hamburger menu's Setup modal —
 // that choice is persisted to localStorage under bq-sync-url.
-const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbz6c2D08WnBlkpb3gott61ZHo7UlFFPnYUVpHkx6Ix9WJODp6CoxmOqus8_uI8CrGwW/exec';
+const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxviRf3TFbkwqpA_pP-Tc8zfRi8kNiy-oXEUqa3XAYALrR0xxeO7gEM7Is5ShXqUeSZ/exec';
 
 function loadPersisted() {
   const load = (key, fallback) => {
