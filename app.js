@@ -616,7 +616,9 @@ function setSongSort(s) { state.ui.songSort = s; render(); }
 
 function songCardHTML(song) {
   const voteCount = (song.votes || []).length;
-  return `<div data-action="open-song" data-id="${song.id}" style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '11px 14px', cursor: 'pointer', transition: 'all 0.15s', position: 'relative', display: 'flex', 'align-items': 'center', gap: '10px' })}">
+  const borderColor = song.status === 'learning' ? C.org : C.border;
+  const opacity = song.status === 'shelved' ? 0.5 : 1;
+  return `<div data-action="open-song" data-id="${song.id}" style="${css({ background: C.surf, border: `1px solid ${borderColor}`, 'border-radius': '8px', padding: '11px 14px', cursor: 'pointer', transition: 'all 0.15s', position: 'relative', display: 'flex', 'align-items': 'center', gap: '10px', opacity })}">
     <div style="${css({ flex: 1, 'min-width': 0 })}">
       <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '15px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.title)}</div>
       ${song.artist ? `<div style="${css({ 'font-size': '11px', color: C.dim, 'margin-top': '2px', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.artist)}</div>` : ''}
