@@ -94,6 +94,8 @@ There's no virtual DOM. The page has four independent mount points — `#topbar-
 
 **Events** are handled via a single delegated `click` listener on `document`, dispatching on `data-action` attributes (plus `data-*` attributes for parameters) to a big switch statement. A parallel delegated `input` listener handles the search box and the few live-preview fields.
 
+**Routing** is a plain URL hash (`#songs`, `#setlists`, `#jams`, `#playlists`, `#reminders`, `#members`) — no history library. `navClick()` sets `location.hash`, which fires the browser's native `hashchange` event; a single listener on that event is what actually updates `state.nav` and re-renders, so clicks, manually-edited URLs, and browser back/forward all go through the same path. An invalid or missing hash falls back to `songs`.
+
 **The teleprompter** (song detail auto-scroll) bypasses `render()` entirely while playing — a `setInterval` directly mutates `scrollTop` and a progress bar's `style.width` via `getElementById`, so re-renders never interrupt an active scroll or reset position.
 
 ### Design tokens
