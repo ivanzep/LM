@@ -38,7 +38,7 @@ By default, all data lives in `localStorage` — private to one browser/device. 
 
 No code edit or redeploy needed — the URL is saved to `localStorage` (`bq-sync-url`) and can be changed anytime from the same Setup modal, including to blank to disable sync again. The app also ships with a default URL (`DEFAULT_SYNC_URL` in app.js) used the first time any device loads the site with no saved override.
 
-Once enabled: every add/edit/delete pushes that collection (songs, setlists, jams, members, reminders, playlists) as a JSON blob to its own row in the `Data` sheet tab, and the app fetches the full dataset from the Sheet on load. Click 🔄 in the top bar anytime to pull in changes made on another device. This is last-write-wins (no real-time collaboration or conflict resolution) and each save/load is a network round-trip of a few hundred ms to a couple seconds — fine for a personal band tool, not built for heavy concurrent editing.
+Once enabled: every add/edit/delete pushes that collection (songs, setlists, jams, members, reminders, playlists) as a JSON blob to its own row in the `Data` sheet tab, and the app fetches the full dataset from the Sheet on load. Open the **☰ menu** anytime to see the sync status and click 🔄 to pull in changes made on another device. This is last-write-wins (no real-time collaboration or conflict resolution) and each save/load is a network round-trip of a few hundred ms to a couple seconds — fine for a personal band tool, not built for heavy concurrent editing.
 
 `localStorage` still updates on every change too, so the app keeps working offline or if the Sheet is unreachable — it just won't be in sync with other devices until the network call succeeds.
 
@@ -206,7 +206,7 @@ Embed URLs are generated via `getEmbedUrl(url)` — supports Spotify playlists/a
 | Song Detail | Full-page song view with teleprompter auto-scroll (play/pause, speed 1–10, progress %). The playlist side panel persists across the whole Songs section — switching Lyrics/Tabs/Notes or navigating between songs never interrupts playback, since only the tab content re-renders, not the panel |
 | Setlists | Setlist CRUD, song picker, reorder with ▲▼ |
 | Jams | Three sections: Open / Proposed / Past (all collapsible), availability voting, optional start/end time |
-| Playlists | Per-member playlists with iframe embed toggle and an "Open Full Player" link (new tab, full-size — useful for Apple Music where the inline embed is cramped) |
+| Playlists | Per-member playlists with iframe embed toggle and an "Open Full Player" link (new tab, full-size — useful for Apple Music where the inline embed is cramped). Adding a playlist can also bulk-create songs (one per line) straight into the Songs section |
 | Reminders | Priority-sorted checklist with overdue detection — accessed from the ☰ menu |
 | Members | Band roster with color picker — accessed from the ☰ menu |
 
