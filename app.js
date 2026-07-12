@@ -844,8 +844,17 @@ function savePlaylist() {
   const memberId = document.getElementById('plf-memberId').value;
   const url = document.getElementById('plf-url').value.trim();
   const description = document.getElementById('plf-description').value;
+  const songsRaw = document.getElementById('plf-songs').value;
   if (!name || !url) return;
   updPlaylists([...state.playlists, { name, memberId, url, description, id: uid() }]);
+  const lines = songsRaw.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length) {
+    const newSongs = lines.map(line => {
+      const [title, artist] = line.split(/\s+-\s+/, 2);
+      return { ...BLANK_SONG, title: (title || line).trim(), artist: (artist || '').trim(), id: uid() };
+    });
+    updSongs([...state.songs, ...newSongs]);
+  }
   state.modal = null;
   render();
 }
@@ -1007,16 +1016,19 @@ function topBarTemplate() {
     return `<button data-action="nav" data-id="${id}" style="${css({ display: 'flex', 'align-items': 'center', gap: '8px', width: '100%', background: active ? C.raised : 'none', border: 'none', color: active ? C.acc : C.txt, cursor: 'pointer', 'font-size': '13px', 'font-family': "'DM Sans', sans-serif", padding: '8px 10px', 'border-radius': '5px', 'text-align': 'left' })}">${icon(iconName, 15)}<span>${label}</span>${count}</button>`;
   }).join('');
 
+  const syncRow = SYNC_URL ? `<div style="${css({ display: 'flex', 'align-items': 'center', gap: '8px', width: '100%', padding: '8px 10px' })}">
+    <span id="sync-status" style="${css({ 'font-size': '12px', color: C.sub, 'white-space': 'nowrap', flex: 1, display: 'flex', 'align-items': 'center', gap: '6px' })}">${syncStatusLabel()}</span>
+    <button data-action="sync-refresh" title="Reload from Google Sheet" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', padding: '2px', display: 'flex', 'align-items': 'center' })}">${icon('refresh', 14)}</button>
+  </div>
+  <div style="${css({ height: '1px', background: C.border, margin: '4px 6px' })}"></div>` : '';
+
   return `<div style="${css({ background: C.surf, 'border-bottom': `1px solid ${C.border}`, padding: '0 16px', height: '52px', display: 'flex', 'align-items': 'center', gap: '6px', position: 'sticky', top: 0, 'z-index': 40 })}">
     <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}">LUCKY MACHOS</div>
     <div style="${css({ display: 'flex', gap: '2px', flex: 1, 'overflow-x': 'auto' })}">${items}</div>
-    ${SYNC_URL ? `<div style="${css({ display: 'flex', 'align-items': 'center', gap: '6px', flexShrink: 0, 'margin-left': '8px' })}">
-      <span id="sync-status" style="${css({ 'font-size': '11px', color: C.dim, 'white-space': 'nowrap' })}">${syncStatusLabel()}</span>
-      <button data-action="sync-refresh" title="Reload from Google Sheet" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', padding: '4px', display: 'flex', 'align-items': 'center' })}">${icon('refresh', 15)}</button>
-    </div>` : ''}
     <div id="hamburger-wrapper" style="${css({ position: 'relative', flexShrink: 0, 'margin-left': '8px' })}">
       <button data-action="toggle-menu" title="Menu" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '17px', padding: '4px 6px', position: 'relative' })}">☰${pendingRem > 0 ? `<span style="${css({ position: 'absolute', top: '2px', right: '2px', width: '7px', height: '7px', 'border-radius': '50%', background: C.org })}"></span>` : ''}</button>
-      ${state.ui.menuOpen ? `<div style="${css({ position: 'absolute', top: '100%', right: 0, background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '4px', 'min-width': '170px', 'z-index': 60, 'box-shadow': '0 8px 24px #00000066' })}">
+      ${state.ui.menuOpen ? `<div style="${css({ position: 'absolute', top: '100%', right: 0, background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '4px', 'min-width': '190px', 'z-index': 60, 'box-shadow': '0 8px 24px #00000066' })}">
+        ${syncRow}
         ${menuItems}
         <div style="${css({ height: '1px', background: C.border, margin: '4px 6px' })}"></div>
         <button data-action="open-setup-modal" style="${css({ display: 'flex', 'align-items': 'center', gap: '8px', width: '100%', background: 'none', border: 'none', color: C.txt, cursor: 'pointer', 'font-size': '13px', 'font-family': "'DM Sans', sans-serif", padding: '8px 10px', 'border-radius': '5px', 'text-align': 'left' })}">⚙ Setup</button>
@@ -1100,7 +1112,12 @@ function modalTemplate() {
         ${inputHTML({ id: 'plf-url', value: '', placeholder: 'https://open.spotify.com/playlist/...' })}
         <div id="plf-platform-preview" style="${css({ 'margin-top': '5px', 'font-size': '11px', color: C.dim })}"></div>
       </div>
-      <div style="${css({ 'margin-bottom': '20px' })}">${lbl('Description')}${taHTML({ id: 'plf-description', value: '', placeholder: "What's this playlist for the band?", rows: 3 })}</div>
+      <div style="${css({ 'margin-bottom': '12px' })}">${lbl('Description')}${taHTML({ id: 'plf-description', value: '', placeholder: "What's this playlist for the band?", rows: 3 })}</div>
+      <div style="${css({ 'margin-bottom': '20px' })}">
+        ${lbl('Add songs from this playlist (optional)')}
+        ${taHTML({ id: 'plf-songs', value: '', placeholder: 'One song per line, e.g.\nSummer Groove - Original\nMidnight Blues', rows: 4 })}
+        <div style="${css({ 'font-size': '11px', color: C.dim, 'margin-top': '4px' })}">Each line becomes a new song in the Songs section (title, or "Title - Artist"). Fill in key/BPM/lyrics later from there.</div>
+      </div>
       <div style="${css({ display: 'flex', gap: '8px', 'justify-content': 'flex-end' })}">
         ${btn('Cancel', { action: 'close-modal' })}
         ${btn('Add Playlist', { action: 'save-playlist', variant: 'primary' })}
