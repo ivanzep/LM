@@ -13,7 +13,7 @@
 // keyed by member ID and normally set via the app's voting UI, not by hand.
 
 const SCHEMAS = {
-  songs:     ['id', 'title', 'artist', 'key', 'bpm', 'genre', 'status', 'tags', 'tabUrl', 'lyrics', 'tabs', 'notes'],
+  songs:     ['id', 'title', 'artist', 'key', 'bpm', 'genre', 'status', 'tags', 'tabUrl', 'lyrics', 'tabs', 'notes', 'rating', 'votes'],
   setlists:  ['id', 'name', 'songIds', 'created', 'notes'],
   jams:      ['id', 'date', 'time', 'endTime', 'location', 'notes', 'status', 'availability'],
   members:   ['id', 'name', 'instrument', 'color'],
@@ -21,7 +21,7 @@ const SCHEMAS = {
   playlists: ['id', 'memberId', 'name', 'url', 'description'],
 };
 const TAB_NAMES = { songs: 'Songs', setlists: 'Setlists', jams: 'Jams', members: 'Members', reminders: 'Reminders', playlists: 'Playlists' };
-const ARRAY_FIELDS = { setlists: ['songIds'] };
+const ARRAY_FIELDS = { setlists: ['songIds'], songs: ['votes'] };
 const JSON_FIELDS = { jams: ['availability'] };
 const LEGACY_TAB = 'Data'; // old single-blob-per-row format, read as a fallback only
 
