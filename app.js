@@ -676,8 +676,7 @@ function songCardHTML(song) {
         ${voteCount ? `<span style="${css({ 'font-size': '10px', color: C.sage })}">${voteCount} vote${voteCount === 1 ? '' : 's'}</span>` : ''}
       </div>
     </div>
-    <span style="${css({ color: C.acc, 'font-size': '13px', flexShrink: 0 })}">→</span>
-    <button data-action="delete-song" data-id="${song.id}" style="${css({ position: 'absolute', top: '8px', right: '26px', background: 'none', border: 'none', color: C.org, cursor: 'pointer', 'font-size': '11px', 'font-weight': 700, 'line-height': 1 })}">✕</button>
+    <button data-action="delete-song" data-id="${song.id}" style="${css({ position: 'absolute', top: '6px', right: '6px', background: 'none', border: 'none', color: C.org, cursor: 'pointer', 'font-size': '11px', 'font-weight': 700, 'line-height': 1 })}">✕</button>
   </div>`;
 }
 
