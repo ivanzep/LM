@@ -347,7 +347,7 @@ function empty(iconName, text) {
 }
 function sh(title, sub, action) {
   return `<div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '18px' })}">
-    <div><span style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em' })}">${title}</span>${sub ? `<span style="${css({ color: C.sub, 'font-size': '15px', 'margin-left': '8px' })}">${sub}</span>` : ''}</div>
+    <div><span style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em', color: C.txt })}">${title}</span>${sub ? `<span style="${css({ color: C.sub, 'font-size': '15px', 'margin-left': '8px' })}">${sub}</span>` : ''}</div>
     ${action || ''}
   </div>`;
 }
