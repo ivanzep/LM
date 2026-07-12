@@ -379,10 +379,7 @@ function songFormHTML(song, saveAction, saveData, saveLabel) {
       <div>${lbl('BPM')}${inputHTML({ id: 'sf-bpm', value: s.bpm, placeholder: '120' })}</div>
       <div>${lbl('Genre')}${inputHTML({ id: 'sf-genre', value: s.genre, placeholder: 'Funk, Blues…' })}</div>
     </div>
-    <div style="${css({ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '12px', 'margin-bottom': '12px' })}">
-      <div>${lbl('Status')}${selHTML({ id: 'sf-status', value: s.status, options: [{ value: 'learning', label: 'Learning' }, { value: 'ready', label: 'Ready' }, { value: 'shelved', label: 'Shelved' }] })}</div>
-      <div>${lbl('Tags (comma-separated)')}${inputHTML({ id: 'sf-tags', value: s.tags, placeholder: 'funk, opener…' })}</div>
-    </div>
+    <div style="${css({ 'margin-bottom': '12px' })}">${lbl('Tags (comma-separated)')}${inputHTML({ id: 'sf-tags', value: s.tags, placeholder: 'funk, opener…' })}</div>
     <div style="${css({ 'margin-bottom': '12px' })}">
       ${lbl('Tab Website (Songsterr, Ultimate Guitar, etc.)')}
       ${inputHTML({ id: 'sf-tabUrl', value: s.tabUrl, placeholder: 'https://www.songsterr.com/...' })}
@@ -405,7 +402,6 @@ function readSongForm() {
     key: document.getElementById('sf-key').value,
     bpm: (() => { const v = document.getElementById('sf-bpm').value; const n = Number(v); return v !== '' && !isNaN(n) ? n : v; })(),
     genre: document.getElementById('sf-genre').value,
-    status: document.getElementById('sf-status').value,
     tags: document.getElementById('sf-tags').value,
     tabUrl: document.getElementById('sf-tabUrl').value,
     lyrics: document.getElementById('sf-lyrics').value,
@@ -585,6 +581,23 @@ function toggleSongVote(songId, memberId) {
   if (el) el.innerHTML = songMetaWidgetHTML(updated);
 }
 
+const STATUS_INFO = { ready: [C.sage, 'Ready'], learning: [C.acc, 'Learning'], shelved: [C.dim, 'Shelved'] };
+function statusChipsHTML(song) {
+  return Object.entries(STATUS_INFO).map(([s, [c, label]]) => {
+    const active = song.status === s;
+    return `<button data-action="set-song-status" data-id="${song.id}" data-status="${s}" style="${css({ background: active ? c : 'transparent', color: active ? C.bg : c, border: `1px solid ${c}`, padding: '2px 9px', 'border-radius': '4px', 'font-size': '10px', 'font-weight': 700, 'letter-spacing': '0.04em', cursor: 'pointer' })}">${label}</button>`;
+  }).join('');
+}
+function setSongStatus(id, status) {
+  const song = state.songs.find(s => s.id === id);
+  if (!song || song.status === status) return;
+  const updated = { ...song, status };
+  updSongs(state.songs.map(s => s.id === id ? updated : s));
+  if (state.songPage && state.songPage.id === id) state.songPage = updated;
+  const el = document.getElementById('sd-status-chips');
+  if (el) el.innerHTML = statusChipsHTML(updated);
+}
+
 function songDetailContentHTML(song) {
   if (sdTab === 'lyrics') return `<div style="${css({ 'white-space': 'pre-wrap', 'font-size': '15px', color: C.sub, 'line-height': 2.0, 'font-family': "'DM Sans', sans-serif" })}">${song.lyrics ? esc(song.lyrics) : `<em style="color:${C.dim}">No lyrics yet — click Edit Song to add.</em>`}</div>`;
   if (sdTab === 'tabs') return `<div style="${css({ 'font-family': "'JetBrains Mono', monospace", 'font-size': '13px', color: C.acc, 'white-space': 'pre', 'line-height': 1.8 })}">${song.tabs ? esc(song.tabs) : `<span style="color:${C.dim};font-family:'DM Sans', sans-serif;font-style:italic">No tabs yet — click Edit Song to add.</span>`}</div>`;
@@ -606,7 +619,7 @@ function songDetailTemplate(song) {
     <div style="${css({ 'margin-bottom': '18px', 'padding-bottom': '18px', 'border-bottom': `1px solid ${C.border}` })}">
       <h1 style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '28px', 'font-weight': 500, 'letter-spacing': '0.02em', color: C.txt, margin: '0 0 10px 0' })}">${esc(song.title)}</h1>
       <div style="${css({ display: 'flex', gap: '8px', 'align-items': 'center', 'flex-wrap': 'wrap', 'margin-bottom': '8px' })}">
-        ${statusBadge(song.status)}
+        <span id="sd-status-chips" style="${css({ display: 'inline-flex', gap: '4px' })}">${statusChipsHTML(song)}</span>
         <span style="${css({ color: C.sub, 'font-size': '13px' })}">${esc(song.key)}</span>
         ${song.bpm ? `<span style="${css({ color: C.dim, 'font-size': '13px' })}">· ${esc(song.bpm)} BPM</span>` : ''}
         ${song.genre ? `<span style="${css({ color: C.dim, 'font-size': '13px' })}">· ${esc(song.genre)}</span>` : ''}
@@ -1367,6 +1380,7 @@ document.addEventListener('click', (e) => {
     case 'teleprompter-reset': teleprompterReset(); return;
     case 'set-song-rating': setSongRating(el.dataset.id, Number(el.dataset.rating)); return;
     case 'toggle-song-vote': toggleSongVote(el.dataset.id, el.dataset.memberId); return;
+    case 'set-song-status': setSongStatus(el.dataset.id, el.dataset.status); return;
     case 'set-song-sort': setSongSort(el.dataset.sort); return;
     case 'toggle-song-group': toggleSongGroupCollapse(el.dataset.key); return;
 
