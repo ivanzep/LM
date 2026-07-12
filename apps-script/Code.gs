@@ -25,6 +25,17 @@ const ARRAY_FIELDS = { setlists: ['songIds'], songs: ['votes'] };
 const JSON_FIELDS = { jams: ['availability'] };
 const LEGACY_TAB = 'Data'; // old single-blob-per-row format, read as a fallback only
 
+// Row order used when writing each tab, so the sheet reads sensibly for
+// manual browsing rather than showing raw save-order.
+const SORTERS = {
+  songs: (a, b) => (b.rating || 0) - (a.rating || 0) || ((b.votes || []).length - (a.votes || []).length) || String(a.title || '').localeCompare(String(b.title || '')),
+  jams: (a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.time || '').localeCompare(String(b.time || '')),
+  setlists: (a, b) => String(a.name || '').localeCompare(String(b.name || '')),
+  members: (a, b) => String(a.name || '').localeCompare(String(b.name || '')),
+  reminders: (a, b) => String(a.text || '').localeCompare(String(b.text || '')),
+  playlists: (a, b) => String(a.name || '').localeCompare(String(b.name || '')),
+};
+
 function getTab_(key) {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_NAMES[key]);
 }
@@ -75,10 +86,11 @@ function readSection_(key) {
 function writeSection_(key, items) {
   const headers = SCHEMAS[key];
   const sheet = ensureTab_(key);
+  const sorted = SORTERS[key] ? items.slice().sort(SORTERS[key]) : items;
   sheet.clearContents();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  if (items.length) {
-    const rows = items.map(item => headers.map(h => serializeCell_(key, h, item[h])));
+  if (sorted.length) {
+    const rows = sorted.map(item => headers.map(h => serializeCell_(key, h, item[h])));
     sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
   }
   sheet.setFrozenRows(1);
