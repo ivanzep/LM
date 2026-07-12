@@ -30,15 +30,17 @@ The site will be served at `https://ivanzep.github.io/LM/`. All asset references
 
 By default, all data lives in `localStorage` — private to one browser/device. To share live data across bandmates' devices, wire up a Google Sheet as a lightweight backend:
 
-1. Create a new Google Sheet. Leave it otherwise empty — a `Data` tab is created automatically on first save.
+1. Create a new Google Sheet. Leave it otherwise empty — a tab per section (`Songs`, `Setlists`, `Jams`, `Members`, `Reminders`, `Playlists`) is created automatically on first save.
 2. In the Sheet, go to **Extensions → Apps Script**, delete the placeholder code, and paste in the contents of [`apps-script/Code.gs`](apps-script/Code.gs).
 3. Click **Deploy → New deployment** → type **Web app**. Set **Execute as: Me** and **Who has access: Anyone**, then deploy and authorize it.
 4. Copy the deployment's Web App URL (ends in `/exec`).
 5. In the app, open the **☰ menu → ⚙ Setup**, paste the URL into the Google Sheets Sync URL field, and Save.
 
-No code edit or redeploy needed — the URL is saved to `localStorage` (`bq-sync-url`) and can be changed anytime from the same Setup modal, including to blank to disable sync again. The app also ships with a default URL (`DEFAULT_SYNC_URL` in app.js) used the first time any device loads the site with no saved override.
+No code edit or redeploy needed — the URL is saved to `localStorage` (`bq-sync-url`) and can be changed anytime from the same Setup modal, including to blank to disable sync again. The app also ships with a default URL (`DEFAULT_SYNC_URL` in app.js) used the first time any device loads the site with no saved override. (If you already had the Apps Script deployed under the old single-`Data`-tab format, edit the deployment's code in place — **Deploy → Manage deployments → Edit → Version: New version → Deploy** — the URL stays the same.)
 
-Once enabled: every add/edit/delete pushes that collection (songs, setlists, jams, members, reminders, playlists) as a JSON blob to its own row in the `Data` sheet tab, and the app fetches the full dataset from the Sheet on load. Open the **☰ menu** anytime to see the sync status and click 🔄 to pull in changes made on another device. This is last-write-wins (no real-time collaboration or conflict resolution) and each save/load is a network round-trip of a few hundred ms to a couple seconds — fine for a personal band tool, not built for heavy concurrent editing.
+Each section gets its own sheet tab with a real header row and one row per item, so you can add or edit entries by hand directly in the spreadsheet — for example, add a row to the `Songs` tab with a title and the app picks it up next load or on a ☰ menu → 🔄 refresh. Nested fields that don't fit one cell are flattened into a single column: a Setlist's `songIds` is a comma-separated list, and a Jam's `availability` is a small JSON string keyed by member ID (normally set via the app's voting UI rather than by hand). If you had data saved under the old format, it's read as a one-time fallback from the old `Data` tab until the section is saved again in the new format — safe to delete that tab once all six new tabs have real data in them.
+
+Once enabled: every add/edit/delete pushes that section's full table back to its sheet tab, and the app fetches everything from the Sheet on load. Open the **☰ menu** anytime to see the sync status and click 🔄 to pull in changes made on another device (or by hand in the Sheet). This is last-write-wins (no real-time collaboration or conflict resolution) and each save/load is a network round-trip of a few hundred ms to a couple seconds — fine for a personal band tool, not built for heavy concurrent editing.
 
 `localStorage` still updates on every change too, so the app keeps working offline or if the Sheet is unreachable — it just won't be in sync with other devices until the network call succeeds.
 
