@@ -151,6 +151,7 @@ const state = {
     songFilter: 'all',
     songQuery: '',
     songSort: 'none',
+    songGroupCollapsed: {},
     slExpanded: null,
     slPicker: null,
     jamShowOpen: true,
@@ -262,7 +263,22 @@ function render() {
   const activeId = active && active.id;
   const selStart = active && 'selectionStart' in active ? active.selectionStart : null;
   const selEnd = active && 'selectionStart' in active ? active.selectionEnd : null;
+
+  // Preserve the playlist sidebar's live iframe across ANY render() call —
+  // innerHTML replacement always destroys/reloads iframes otherwise, which
+  // reset playback on every filter/sort/nav change, not just tab switches.
+  const oldIframe = document.getElementById('sd-playlist-iframe');
+  if (oldIframe) oldIframe.remove();
+
   document.getElementById('root').innerHTML = appTemplate();
+
+  if (oldIframe) {
+    const newIframe = document.getElementById('sd-playlist-iframe');
+    if (newIframe && newIframe.src === oldIframe.src) {
+      newIframe.replaceWith(oldIframe);
+    }
+  }
+
   if (activeId) {
     const el = document.getElementById(activeId);
     if (el) {
@@ -490,7 +506,7 @@ function songDetailPlaylistPanel() {
         ${selected ? `
           <div style="${css({ 'margin-top': '12px' })}">
             ${embedUrl
-              ? `<iframe src="${esc(embedUrl)}" style="${css({ width: '100%', border: 'none', 'border-radius': '8px', height: embedH + 'px', display: 'block' })}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title="${esc(selected.name)}"></iframe>`
+              ? `<iframe id="sd-playlist-iframe" src="${esc(embedUrl)}" style="${css({ width: '100%', border: 'none', 'border-radius': '8px', height: embedH + 'px', display: 'block' })}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title="${esc(selected.name)}"></iframe>`
               : `<div style="${css({ 'font-size': '12px', color: C.dim, padding: '20px 0', 'text-align': 'center' })}">No embeddable player for this link.</div>`}
             <div style="${css({ display: 'flex', gap: '6px', 'margin-top': '10px', 'flex-wrap': 'wrap' })}">
               <a href="${esc(selected.url)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px', padding: '5px 10px', background: pInfo.bg, border: `1px solid ${pInfo.color}44`, 'border-radius': '6px', color: pInfo.color, 'font-size': '11px', 'font-weight': 600, 'text-decoration': 'none' })}">${icon('link', 12)} Open in ${pInfo.name}</a>
@@ -613,6 +629,7 @@ function openAddSongModal() { state.modal = { type: 'addSong' }; render(); }
 function setSongFilter(f) { state.ui.songFilter = f; render(); }
 function setSongQuery(q) { state.ui.songQuery = q; render(); }
 function setSongSort(s) { state.ui.songSort = s; render(); }
+function toggleSongGroupCollapse(key) { state.ui.songGroupCollapsed[key] = !state.ui.songGroupCollapsed[key]; render(); }
 
 function songCardHTML(song) {
   const voteCount = (song.votes || []).length;
@@ -659,6 +676,10 @@ function groupSongs(filtered) {
       .map(r => ({ label: r === 0 ? 'Unrated' : `${'★'.repeat(r)}${'☆'.repeat(5 - r)} (${r})`, songs: filtered.filter(s => (s.rating || 0) === r) }))
       .filter(g => g.songs.length);
   }
+  if (mode === 'status') {
+    const order = [['ready', 'Ready'], ['learning', 'Learning'], ['shelved', 'Shelved']];
+    return order.map(([s, label]) => ({ label, songs: filtered.filter(x => x.status === s) })).filter(g => g.songs.length);
+  }
   if (mode === 'votes') {
     const map = new Map();
     filtered.forEach(s => { const c = (s.votes || []).length; if (!map.has(c)) map.set(c, []); map.get(c).push(s); });
@@ -675,7 +696,7 @@ function songsViewTemplate() {
     return ok && (!q || s.title.toLowerCase().includes(q) || (s.genre || '').toLowerCase().includes(q) || (s.tags || '').toLowerCase().includes(q));
   });
   const filterChips = ['all', 'ready', 'learning', 'shelved'].map(f => `<button data-action="set-song-filter" data-filter="${f}" style="${chipStyle(songFilter === f)}">${f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}</button>`).join('');
-  const sortChips = [['none', 'None'], ['artist', 'Artist'], ['setlist', 'Setlist'], ['rating', 'Rating'], ['votes', 'Votes']]
+  const sortChips = [['none', 'None'], ['artist', 'Artist'], ['setlist', 'Setlist'], ['status', 'Status'], ['rating', 'Rating'], ['votes', 'Votes']]
     .map(([v, label]) => `<button data-action="set-song-sort" data-sort="${v}" style="${chipStyle(songSort === v)}">${label}</button>`).join('');
 
   let body;
@@ -686,12 +707,17 @@ function songsViewTemplate() {
     if (groups === null) {
       body = `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' })}">${filtered.map(songCardHTML).join('')}</div>`;
     } else {
-      body = groups.map(g => `
-        <div style="${css({ 'margin-bottom': '20px' })}">
-          <div style="${css({ 'font-size': '11px', 'font-weight': 700, color: C.sub, 'letter-spacing': '0.06em', 'text-transform': 'uppercase', 'margin-bottom': '8px' })}">${esc(g.label)} <span style="color:${C.dim}">(${g.songs.length})</span></div>
-          <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' })}">${g.songs.map(songCardHTML).join('')}</div>
-        </div>
-      `).join('');
+      body = groups.map(g => {
+        const key = `${songSort}:${g.label}`;
+        const collapsed = !!state.ui.songGroupCollapsed[key];
+        return `<div style="${css({ 'margin-bottom': '20px' })}">
+          <div data-action="toggle-song-group" data-key="${esc(key)}" style="${css({ cursor: 'pointer', display: 'flex', 'align-items': 'center', gap: '8px', 'margin-bottom': collapsed ? 0 : '8px', 'user-select': 'none' })}">
+            <span style="${css({ 'font-size': '10px', color: C.sub, flexShrink: 0 })}">${collapsed ? '▶' : '▼'}</span>
+            <span style="${css({ 'font-size': '11px', 'font-weight': 700, color: C.sub, 'letter-spacing': '0.06em', 'text-transform': 'uppercase' })}">${esc(g.label)} <span style="color:${C.dim}">(${g.songs.length})</span></span>
+          </div>
+          ${collapsed ? '' : `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' })}">${g.songs.map(songCardHTML).join('')}</div>`}
+        </div>`;
+      }).join('');
     }
   }
 
@@ -1327,6 +1353,7 @@ document.addEventListener('click', (e) => {
     case 'set-song-rating': setSongRating(el.dataset.id, Number(el.dataset.rating)); return;
     case 'toggle-song-vote': toggleSongVote(el.dataset.id, el.dataset.memberId); return;
     case 'set-song-sort': setSongSort(el.dataset.sort); return;
+    case 'toggle-song-group': toggleSongGroupCollapse(el.dataset.key); return;
 
     case 'open-add-setlist-modal': openAddSetlistModal(); return;
     case 'open-edit-setlist-modal': openEditSetlistModal(id); return;
