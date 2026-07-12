@@ -150,6 +150,7 @@ const state = {
   ui: {
     songFilter: 'all',
     songQuery: '',
+    songSort: 'none',
     slExpanded: null,
     slPicker: null,
     jamShowOpen: true,
@@ -333,7 +334,7 @@ function modalWrap(title, bodyHTML) {
 }
 
 // ── Song form (shared add/edit) ────────────────────────────────
-const BLANK_SONG = { title:'', artist:'', key:'Am', bpm:120, genre:'', status:'learning', tags:'', lyrics:'', tabs:'', notes:'', tabUrl:'' };
+const BLANK_SONG = { title:'', artist:'', key:'Am', bpm:120, genre:'', status:'learning', tags:'', lyrics:'', tabs:'', notes:'', tabUrl:'', rating:0, votes:[] };
 
 function songFormHTML(song, saveAction, saveData, saveLabel) {
   const s = song || BLANK_SONG;
@@ -456,9 +457,10 @@ function saveSong(mode, id) {
   const form = readSongForm();
   if (!form.title) return;
   if (mode === 'add') {
-    updSongs([...state.songs, { ...form, id: uid() }]);
+    updSongs([...state.songs, { ...BLANK_SONG, ...form, id: uid() }]);
   } else {
-    const updated = { ...form, id };
+    const existing = state.songs.find(s => s.id === id) || {};
+    const updated = { ...existing, ...form, id };
     updSongs(state.songs.map(s => s.id === id ? updated : s));
     if (state.songPage && state.songPage.id === id) state.songPage = updated;
   }
@@ -501,6 +503,59 @@ function songDetailPlaylistPanel() {
   </div>`;
 }
 
+function starsHTML(rating, { interactive = false, size = '15px', songId = '' } = {}) {
+  const stars = [1, 2, 3, 4, 5].map(n => {
+    const filled = n <= (rating || 0);
+    const attrs = interactive ? `data-action="set-song-rating" data-id="${songId}" data-rating="${n}"` : '';
+    const tag = interactive ? 'button' : 'span';
+    const base = css({ background: 'none', border: 'none', padding: 0, 'font-size': size, cursor: interactive ? 'pointer' : 'default', color: filled ? C.acc : C.border, 'line-height': 1 });
+    return `<${tag} ${attrs} style="${base}">${filled ? '★' : '☆'}</${tag}>`;
+  }).join('');
+  return `<span style="${css({ display: 'inline-flex', gap: '1px', 'align-items': 'center' })}">${stars}</span>`;
+}
+
+function songMetaWidgetHTML(song) {
+  const votes = song.votes || [];
+  const voteChips = state.members.map(m => {
+    const voted = votes.includes(m.id);
+    return `<button data-action="toggle-song-vote" data-id="${song.id}" data-member-id="${m.id}" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px', padding: '4px 10px', 'border-radius': '14px', border: `1px solid ${voted ? C.sage : C.border}`, background: voted ? '#1D2B18' : 'transparent', color: voted ? C.sage : C.sub, 'font-size': '12px', 'font-weight': 600, cursor: 'pointer' })}"><span style="${css({ width: '7px', height: '7px', 'border-radius': '50%', background: m.color, display: 'inline-block' })}"></span>${esc(m.name)}${voted ? ' ✓' : ''}</button>`;
+  }).join('');
+
+  return `<div style="${css({ display: 'flex', gap: '20px', 'align-items': 'center', 'flex-wrap': 'wrap' })}">
+    <div>
+      ${lbl('Rating')}
+      <div>${starsHTML(song.rating, { interactive: true, size: '18px', songId: song.id })}</div>
+    </div>
+    <div style="${css({ flex: 1, 'min-width': '200px' })}">
+      ${lbl(`Band Votes${votes.length ? ` (${votes.length})` : ''}`)}
+      <div style="${css({ display: 'flex', gap: '6px', 'flex-wrap': 'wrap', 'margin-top': '6px' })}">${voteChips}</div>
+    </div>
+  </div>`;
+}
+
+function setSongRating(id, rating) {
+  const song = state.songs.find(s => s.id === id);
+  if (!song) return;
+  const newRating = song.rating === rating ? 0 : rating;
+  const updated = { ...song, rating: newRating };
+  updSongs(state.songs.map(s => s.id === id ? updated : s));
+  if (state.songPage && state.songPage.id === id) state.songPage = updated;
+  const el = document.getElementById('sd-meta-widget');
+  if (el) el.innerHTML = songMetaWidgetHTML(updated);
+}
+
+function toggleSongVote(songId, memberId) {
+  const song = state.songs.find(s => s.id === songId);
+  if (!song) return;
+  const votes = song.votes || [];
+  const newVotes = votes.includes(memberId) ? votes.filter(v => v !== memberId) : [...votes, memberId];
+  const updated = { ...song, votes: newVotes };
+  updSongs(state.songs.map(s => s.id === songId ? updated : s));
+  if (state.songPage && state.songPage.id === songId) state.songPage = updated;
+  const el = document.getElementById('sd-meta-widget');
+  if (el) el.innerHTML = songMetaWidgetHTML(updated);
+}
+
 function songDetailContentHTML(song) {
   if (sdTab === 'lyrics') return `<div style="${css({ 'white-space': 'pre-wrap', 'font-size': '15px', color: C.sub, 'line-height': 2.0, 'font-family': "'DM Sans', sans-serif" })}">${song.lyrics ? esc(song.lyrics) : `<em style="color:${C.dim}">No lyrics yet — click Edit Song to add.</em>`}</div>`;
   if (sdTab === 'tabs') return `<div style="${css({ 'font-family': "'JetBrains Mono', monospace", 'font-size': '13px', color: C.acc, 'white-space': 'pre', 'line-height': 1.8 })}">${song.tabs ? esc(song.tabs) : `<span style="color:${C.dim};font-family:'DM Sans', sans-serif;font-style:italic">No tabs yet — click Edit Song to add.</span>`}</div>`;
@@ -530,6 +585,7 @@ function songDetailTemplate(song) {
       </div>
       ${tagsHTML}
       ${song.tabUrl ? `<a href="${esc(song.tabUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '6px', padding: '6px 14px', background: C.raised, border: `1px solid ${C.acc}44`, 'border-radius': '6px', color: C.acc, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">${icon('pick', 14)} ${esc(tabSite || 'View Tab')} ↗</a>` : ''}
+      <div id="sd-meta-widget" style="${css({ 'margin-top': '14px', 'padding-top': '14px', 'border-top': `1px solid ${C.border}` })}">${songMetaWidgetHTML(song)}</div>
     </div>
     <div style="${css({ display: 'flex', gap: '2px', background: '#080808', 'border-radius': '8px', padding: '3px', width: 'fit-content', 'margin-bottom': '10px' })}">${tabsRow}</div>
     <div style="${css({ border: `1px solid ${C.border}`, 'border-radius': '10px', overflow: 'hidden' })}">
@@ -556,41 +612,98 @@ function songDetailTemplate(song) {
 function openAddSongModal() { state.modal = { type: 'addSong' }; render(); }
 function setSongFilter(f) { state.ui.songFilter = f; render(); }
 function setSongQuery(q) { state.ui.songQuery = q; render(); }
+function setSongSort(s) { state.ui.songSort = s; render(); }
+
+function songCardHTML(song) {
+  const voteCount = (song.votes || []).length;
+  return `<div data-action="open-song" data-id="${song.id}" style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '11px 14px', cursor: 'pointer', transition: 'all 0.15s', position: 'relative', display: 'flex', 'align-items': 'center', gap: '10px' })}">
+    <div style="${css({ flex: 1, 'min-width': 0 })}">
+      <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '15px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.title)}</div>
+      ${song.artist ? `<div style="${css({ 'font-size': '11px', color: C.dim, 'margin-top': '2px', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.artist)}</div>` : ''}
+      <div style="${css({ display: 'flex', 'align-items': 'center', gap: '6px', 'margin-top': '4px' })}">
+        ${starsHTML(song.rating, { size: '10px' })}
+        ${voteCount ? `<span style="${css({ 'font-size': '10px', color: C.sage })}">${voteCount} vote${voteCount === 1 ? '' : 's'}</span>` : ''}
+      </div>
+    </div>
+    <span style="${css({ color: C.acc, 'font-size': '13px', flexShrink: 0 })}">→</span>
+    <button data-action="delete-song" data-id="${song.id}" style="${css({ position: 'absolute', top: '8px', right: '26px', background: 'none', border: 'none', color: C.org, cursor: 'pointer', 'font-size': '11px', 'font-weight': 700, 'line-height': 1 })}">✕</button>
+  </div>`;
+}
+
+function groupSongs(filtered) {
+  const mode = state.ui.songSort;
+  if (mode === 'artist') {
+    const map = new Map();
+    filtered.forEach(s => {
+      const key = (s.artist || '').trim() || 'Unknown Artist';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(s);
+    });
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([label, songs]) => ({ label, songs: [...songs].sort((a, b) => a.title.localeCompare(b.title)) }));
+  }
+  if (mode === 'setlist') {
+    const groups = [];
+    const used = new Set();
+    state.setlists.forEach(sl => {
+      const songs = (sl.songIds || []).map(id => filtered.find(s => s.id === id)).filter(Boolean);
+      if (songs.length) { groups.push({ label: sl.name, songs }); songs.forEach(s => used.add(s.id)); }
+    });
+    const leftover = filtered.filter(s => !used.has(s.id));
+    if (leftover.length) groups.push({ label: 'Not in a Setlist', songs: leftover });
+    return groups;
+  }
+  if (mode === 'rating') {
+    return [5, 4, 3, 2, 1, 0]
+      .map(r => ({ label: r === 0 ? 'Unrated' : `${'★'.repeat(r)}${'☆'.repeat(5 - r)} (${r})`, songs: filtered.filter(s => (s.rating || 0) === r) }))
+      .filter(g => g.songs.length);
+  }
+  if (mode === 'votes') {
+    const map = new Map();
+    filtered.forEach(s => { const c = (s.votes || []).length; if (!map.has(c)) map.set(c, []); map.get(c).push(s); });
+    return [...map.entries()].sort((a, b) => b[0] - a[0]).map(([count, songs]) => ({ label: `${count} vote${count === 1 ? '' : 's'}`, songs }));
+  }
+  return null;
+}
 
 function songsViewTemplate() {
-  const { songFilter, songQuery } = state.ui;
+  const { songFilter, songQuery, songSort } = state.ui;
   const filtered = state.songs.filter(s => {
     const ok = songFilter === 'all' || s.status === songFilter;
     const q = songQuery.toLowerCase();
     return ok && (!q || s.title.toLowerCase().includes(q) || (s.genre || '').toLowerCase().includes(q) || (s.tags || '').toLowerCase().includes(q));
   });
   const filterChips = ['all', 'ready', 'learning', 'shelved'].map(f => `<button data-action="set-song-filter" data-filter="${f}" style="${chipStyle(songFilter === f)}">${f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}</button>`).join('');
+  const sortChips = [['none', 'None'], ['artist', 'Artist'], ['setlist', 'Setlist'], ['rating', 'Rating'], ['votes', 'Votes']]
+    .map(([v, label]) => `<button data-action="set-song-sort" data-sort="${v}" style="${chipStyle(songSort === v)}">${label}</button>`).join('');
 
-  let grid;
+  let body;
   if (filtered.length === 0) {
-    grid = empty('pick', songQuery || songFilter !== 'all' ? 'No songs match.' : 'Add your first song!');
+    body = empty('pick', songQuery || songFilter !== 'all' ? 'No songs match.' : 'Add your first song!');
   } else {
-    grid = `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' })}">
-      ${filtered.map(song => `
-        <div data-action="open-song" data-id="${song.id}" style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '11px 14px', cursor: 'pointer', transition: 'all 0.15s', position: 'relative', display: 'flex', 'align-items': 'center', gap: '10px' })}">
-          <div style="${css({ flex: 1, 'min-width': 0 })}">
-            <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '15px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.title)}</div>
-            ${song.artist ? `<div style="${css({ 'font-size': '11px', color: C.dim, 'margin-top': '2px', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.artist)}</div>` : ''}
-          </div>
-          <span style="${css({ color: C.acc, 'font-size': '13px', flexShrink: 0 })}">→</span>
-          <button data-action="delete-song" data-id="${song.id}" style="${css({ position: 'absolute', top: '8px', right: '26px', background: 'none', border: 'none', color: C.org, cursor: 'pointer', 'font-size': '11px', 'font-weight': 700, 'line-height': 1 })}">✕</button>
+    const groups = groupSongs(filtered);
+    if (groups === null) {
+      body = `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' })}">${filtered.map(songCardHTML).join('')}</div>`;
+    } else {
+      body = groups.map(g => `
+        <div style="${css({ 'margin-bottom': '20px' })}">
+          <div style="${css({ 'font-size': '11px', 'font-weight': 700, color: C.sub, 'letter-spacing': '0.06em', 'text-transform': 'uppercase', 'margin-bottom': '8px' })}">${esc(g.label)} <span style="color:${C.dim}">(${g.songs.length})</span></div>
+          <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' })}">${g.songs.map(songCardHTML).join('')}</div>
         </div>
-      `).join('')}
-    </div>`;
+      `).join('');
+    }
   }
 
   return `<div>
     ${sh('Songs', `(${state.songs.length})`, btn('+ Add Song', { action: 'open-add-song-modal', variant: 'primary' }))}
-    <div style="${css({ display: 'flex', gap: '8px', 'margin-bottom': '16px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
+    <div style="${css({ display: 'flex', gap: '8px', 'margin-bottom': '10px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
       <input id="song-search" value="${esc(songQuery)}" placeholder="Search by title, genre, tag…" style="${css({ background: C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '14px', padding: '8px 12px', outline: 'none', flex: 1, 'min-width': '150px', 'max-width': '220px' })}" />
       ${filterChips}
     </div>
-    ${grid}
+    <div style="${css({ display: 'flex', gap: '8px', 'margin-bottom': '16px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
+      <span style="${css({ 'font-size': '11px', color: C.dim, 'text-transform': 'uppercase', 'letter-spacing': '0.05em' })}">Group by</span>
+      ${sortChips}
+    </div>
+    ${body}
   </div>`;
 }
 
@@ -1209,6 +1322,9 @@ document.addEventListener('click', (e) => {
     case 'switch-song-tab': switchSongTab(el.dataset.tab); return;
     case 'teleprompter-toggle': teleprompterToggle(); return;
     case 'teleprompter-reset': teleprompterReset(); return;
+    case 'set-song-rating': setSongRating(el.dataset.id, Number(el.dataset.rating)); return;
+    case 'toggle-song-vote': toggleSongVote(el.dataset.id, el.dataset.memberId); return;
+    case 'set-song-sort': setSongSort(el.dataset.sort); return;
 
     case 'open-add-setlist-modal': openAddSetlistModal(); return;
     case 'open-edit-setlist-modal': openEditSetlistModal(id); return;
