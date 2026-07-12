@@ -257,26 +257,41 @@ function saveSetup() {
   if (SYNC_URL) fetchRemote().then(ok => { if (ok) render(); });
 }
 
-// ── Render (focus-preserving) ──────────────────────────────────
+// ── Render (focus-preserving, sidebar-isolating) ────────────────
+// The playlist sidebar lives in its own #sidebar-mount, separate from
+// #main-mount and #topbar-mount, and its innerHTML is only ever replaced
+// when something it actually depends on changes (signature check below).
+// This matters because removing an iframe from the DOM — even briefly,
+// even to reinsert the exact same node — discards its browsing context
+// per spec, reloading it. So the fix isn't "preserve the node", it's
+// "never touch its container at all" unless the sidebar's own content
+// needs to change.
+let lastSidebarSig = null;
+
+function sidebarSignature() {
+  if (state.nav !== 'songs') return 'hidden';
+  return JSON.stringify({
+    playlistId: sdPlaylistId,
+    playlists: state.playlists.map(p => `${p.id}|${p.name}|${p.url}`),
+    members: state.members.map(m => `${m.id}|${m.name}`),
+  });
+}
+
 function render() {
   const active = document.activeElement;
   const activeId = active && active.id;
   const selStart = active && 'selectionStart' in active ? active.selectionStart : null;
   const selEnd = active && 'selectionStart' in active ? active.selectionEnd : null;
 
-  // Preserve the playlist sidebar's live iframe across ANY render() call —
-  // innerHTML replacement always destroys/reloads iframes otherwise, which
-  // reset playback on every filter/sort/nav change, not just tab switches.
-  const oldIframe = document.getElementById('sd-playlist-iframe');
-  if (oldIframe) oldIframe.remove();
+  document.getElementById('topbar-mount').innerHTML = topBarTemplate();
+  document.getElementById('main-mount').innerHTML = contentTemplate();
+  document.getElementById('modal-mount').innerHTML = state.modal ? modalTemplate() : '';
+  document.getElementById('content-row').style.maxWidth = state.nav === 'songs' ? '1320px' : '1000px';
 
-  document.getElementById('root').innerHTML = appTemplate();
-
-  if (oldIframe) {
-    const newIframe = document.getElementById('sd-playlist-iframe');
-    if (newIframe && newIframe.src === oldIframe.src) {
-      newIframe.replaceWith(oldIframe);
-    }
+  const sig = sidebarSignature();
+  if (sig !== lastSidebarSig) {
+    lastSidebarSig = sig;
+    document.getElementById('sidebar-mount').innerHTML = state.nav === 'songs' ? songDetailPlaylistPanel() : '';
   }
 
   if (activeId) {
@@ -496,8 +511,7 @@ function songDetailPlaylistPanel() {
   const embedUrl = selected ? getEmbedUrl(selected.url) : null;
   const embedH = platform === 'spotify' ? 352 : platform === 'youtube' ? 240 : platform === 'apple' ? 450 : 300;
 
-  return `<div style="${css({ width: '300px', flexShrink: 0 })}">
-    <div style="${css({ position: 'sticky', top: '70px' })}">
+  return `<div style="${css({ position: 'sticky', top: '70px' })}">
       <div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '14px' })}">
         ${lbl('Playlist Player')}
         <select id="sd-playlist-select" style="${css({ background: C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '13px', padding: '8px 10px', outline: 'none', cursor: 'pointer', width: '100%', 'margin-top': '6px' })}">
@@ -515,8 +529,7 @@ function songDetailPlaylistPanel() {
           </div>
         ` : `<div style="${css({ 'font-size': '12px', color: C.dim, 'margin-top': '12px', 'text-align': 'center', padding: '20px 0' })}">Pick a playlist to play while you practice.</div>`}
       </div>
-    </div>
-  </div>`;
+    </div>`;
 }
 
 function starsHTML(rating, { interactive = false, size = '15px', songId = '' } = {}) {
@@ -1179,13 +1192,7 @@ function topBarTemplate() {
 }
 
 function contentTemplate() {
-  if (state.nav === 'songs') {
-    const main = state.songPage ? songDetailTemplate(state.songPage) : songsViewTemplate();
-    return `<div style="${css({ display: 'flex', gap: '20px', 'flex-wrap': 'wrap', 'align-items': 'flex-start' })}">
-      <div style="${css({ flex: 1, 'min-width': '320px' })}">${main}</div>
-      ${songDetailPlaylistPanel()}
-    </div>`;
-  }
+  if (state.nav === 'songs') return state.songPage ? songDetailTemplate(state.songPage) : songsViewTemplate();
   if (state.nav === 'setlists') return setlistsViewTemplate();
   if (state.nav === 'jams') return jamsViewTemplate();
   if (state.nav === 'playlists') return playlistsViewTemplate();
@@ -1312,14 +1319,6 @@ function modalTemplate() {
   return '';
 }
 
-function appTemplate() {
-  const wide = state.nav === 'songs';
-  return `<div style="${css({ 'min-height': '100vh', background: C.bg, color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '14px' })}">
-    ${topBarTemplate()}
-    <div style="${css({ 'max-width': wide ? '1320px' : '1000px', margin: '0 auto', padding: '22px 16px' })}">${contentTemplate()}</div>
-  </div>
-  ${state.modal ? modalTemplate() : ''}`;
-}
 
 // ── Event delegation ────────────────────────────────────────────
 document.addEventListener('click', (e) => {
