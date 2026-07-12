@@ -15,6 +15,14 @@ body {
 #main-mount { flex: 1; min-width: 320px; }
 #sidebar-mount { width: 300px; flex-shrink: 0; }
 #sidebar-mount:empty { display: none; width: 0; }
+
+/* On narrow screens, move the main section tabs (Songs/Setlists/Jams/
+   Playlists) into the ☰ menu instead of the top bar. */
+.mobile-nav-section { display: none; }
+@media (max-width: 700px) {
+  #main-nav-tabs { display: none !important; }
+  .mobile-nav-section { display: block; }
+}
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
 input[type="range"] { cursor: pointer; }

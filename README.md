@@ -96,6 +96,8 @@ There's no virtual DOM. The page has four independent mount points — `#topbar-
 
 **Routing** is a plain URL hash (`#songs`, `#setlists`, `#jams`, `#playlists`, `#reminders`, `#members`) — no history library. `navClick()` sets `location.hash`, which fires the browser's native `hashchange` event; a single listener on that event is what actually updates `state.nav` and re-renders, so clicks, manually-edited URLs, and browser back/forward all go through the same path. An invalid or missing hash falls back to `songs`.
 
+**Mobile nav**: below 700px, the top-bar section tabs (Songs/Setlists/Jams/Playlists, `#main-nav-tabs`) are hidden and duplicated inside the ☰ menu instead, alongside Reminders/Members/Setup — so on phones every section lives behind the hamburger and the top bar just shows the title and menu button. Desktop keeps the tabs visible in the top bar as before. Both copies share the same `data-action="nav"` handler, so either one drives the same hash-routing path.
+
 **The teleprompter** (song detail auto-scroll) bypasses `render()` entirely while playing — a `setInterval` directly mutates `scrollTop` and a progress bar's `style.width` via `getElementById`, so re-renders never interrupt an active scroll or reset position.
 
 ### Design tokens
