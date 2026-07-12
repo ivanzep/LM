@@ -495,6 +495,12 @@ function saveSong(mode, id) {
   render();
 }
 function deleteSong(id) { updSongs(state.songs.filter(s => s.id !== id)); render(); }
+function openDeleteSongConfirm(id) { state.modal = { type: 'confirmDeleteSong', id }; render(); }
+function confirmDeleteSong(id) {
+  if (state.songPage && state.songPage.id === id) state.songPage = null;
+  state.modal = null;
+  deleteSong(id);
+}
 
 function songDetailPlaylistPanel() {
   const options = [{ value: '', label: 'Select a playlist…' }, ...state.playlists.map(pl => {
@@ -1237,6 +1243,17 @@ function modalTemplate() {
     const song = state.songs.find(s => s.id === m.id);
     return modalWrap('Edit Song', songFormHTML(song, 'save-song', { mode: 'edit', id: m.id }, 'Save Changes'));
   }
+  if (m.type === 'confirmDeleteSong') {
+    const song = state.songs.find(s => s.id === m.id);
+    if (!song) return '';
+    return modalWrap('Delete Song', `
+      <div style="${css({ 'font-size': '14px', color: C.txt, 'margin-bottom': '20px', 'line-height': 1.6 })}">Delete <strong>${esc(song.title)}</strong>? This can't be undone.</div>
+      <div style="${css({ display: 'flex', gap: '8px', 'justify-content': 'flex-end' })}">
+        ${btn('Cancel', { action: 'close-modal' })}
+        ${btn('Delete', { action: 'confirm-delete-song', data: { id: song.id }, variant: 'danger' })}
+      </div>
+    `);
+  }
   if (m.type === 'addSetlist' || m.type === 'editSetlist') {
     const isAdd = m.type === 'addSetlist';
     const sl = isAdd ? { name: '', notes: '' } : state.setlists.find(s => s.id === m.id);
@@ -1369,7 +1386,8 @@ document.addEventListener('click', (e) => {
       state.modal = null; state.ui.slPicker = null; render(); return;
     case 'nav': navClick(id); return;
     case 'open-song': { const song = state.songs.find(s => s.id === id); if (song) openSong(song); return; }
-    case 'delete-song': deleteSong(id); return;
+    case 'delete-song': openDeleteSongConfirm(id); return;
+    case 'confirm-delete-song': confirmDeleteSong(el.dataset.id); return;
     case 'back-to-songs': closeSong(); return;
     case 'open-add-song-modal': openAddSongModal(); return;
     case 'open-edit-song-modal': openEditSongModal(id); return;
