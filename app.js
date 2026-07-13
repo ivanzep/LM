@@ -170,7 +170,7 @@ const state = {
 // Default Google Apps Script Web App URL (see apps-script/Code.gs and
 // README). Overridable at runtime via the hamburger menu's Setup modal —
 // that choice is persisted to localStorage under bq-sync-url.
-const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxviRf3TFbkwqpA_pP-Tc8zfRi8kNiy-oXEUqa3XAYALrR0xxeO7gEM7Is5ShXqUeSZ/exec';
+const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbyaqa3q-UA38xVRHeSX1AErobQnqTNesZaHkPkGp2X0FdEQatRMvQCUTDHjjL8AUbIZ/exec';
 
 // Ratings used to be 1-5 stars; now they're a 0/25/50/75/100 percent-complete
 // scale. Old values are unambiguous (always <= 5) so they can be rescaled in place.
