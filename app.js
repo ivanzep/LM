@@ -926,6 +926,29 @@ function unconfirmJam(id) { updJams(state.jams.map(j => j.id === id ? { ...j, st
 function deleteJam(id) { updJams(state.jams.filter(j => j.id !== id)); render(); }
 function openAddJamModal() { state.modal = { type: 'addJam' }; render(); }
 function openEditJamModal(id) { state.modal = { type: 'editJam', id }; render(); }
+function addHoursToTime(time, hours) {
+  const [h, m] = time.split(':').map(Number);
+  const total = ((h * 60 + m + Math.round(hours * 60)) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+function hoursBetweenTimes(start, end) {
+  if (!start || !end) return '';
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff <= 0) diff += 1440;
+  const hrs = diff / 60;
+  return Number.isInteger(hrs) ? String(hrs) : String(Math.round(hrs * 100) / 100);
+}
+function updateJamEndTimeFromDuration() {
+  const startEl = document.getElementById('jf-time');
+  const durEl = document.getElementById('jf-duration');
+  const endEl = document.getElementById('jf-endTime');
+  if (!startEl || !durEl || !endEl) return;
+  const dur = parseFloat(durEl.value);
+  if (!startEl.value || !dur || dur <= 0) return;
+  endEl.value = addHoursToTime(startEl.value, dur);
+}
 function saveJam(mode, id) {
   const date = document.getElementById('jf-date').value;
   const time = document.getElementById('jf-time').value;
@@ -1355,8 +1378,9 @@ function modalTemplate() {
     return modalWrap(isAdd ? 'Propose a Date' : 'Edit Jam', `
       ${isAdd ? `<div style="${css({ 'font-size': '13px', color: C.sub, 'margin-bottom': '16px', background: C.raised, 'border-radius': '6px', padding: '8px 12px', 'line-height': 1.6 })}">${icon('bulb', 14)} Propose a date and the band votes In / Maybe / Out. Confirm it once there's enough interest.</div>` : ''}
       <div style="${css({ 'margin-bottom': '12px' })}">${lbl('Date *')}${inputHTML({ id: 'jf-date', value: jam.date, type: 'date' })}</div>
-      <div style="${css({ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '12px', 'margin-bottom': '12px' })}">
+      <div style="${css({ display: 'grid', 'grid-template-columns': '1fr 1fr 1fr', gap: '12px', 'margin-bottom': '12px' })}">
         <div>${lbl('Start Time')}${inputHTML({ id: 'jf-time', value: jam.time || '', type: 'time' })}</div>
+        <div>${lbl('Duration (hr)')}<input id="jf-duration" type="number" step="0.25" min="0" placeholder="e.g. 2.5" value="${esc(hoursBetweenTimes(jam.time, jam.endTime))}" style="${css({ background: C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '14px', padding: '8px 12px', width: '100%', outline: 'none', 'box-sizing': 'border-box' })}" /></div>
         <div>${lbl('End Time')}${inputHTML({ id: 'jf-endTime', value: jam.endTime || '', type: 'time' })}</div>
       </div>
       <div style="${css({ 'margin-bottom': '12px' })}">${lbl('Location')}${inputHTML({ id: 'jf-location', value: jam.location || '', placeholder: "Ivan's backyard, Studio B…" })}</div>
@@ -1548,6 +1572,7 @@ document.addEventListener('input', (e) => {
     if (label) label.textContent = sdSpeed;
     return;
   }
+  if (t.id === 'jf-duration' || t.id === 'jf-time') { updateJamEndTimeFromDuration(); return; }
   if (t.id === 'mf-custom-color') {
     const hidden = document.getElementById('mf-color');
     if (hidden) hidden.value = t.value;
