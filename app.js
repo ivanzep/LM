@@ -170,11 +170,17 @@ const state = {
 // that choice is persisted to localStorage under bq-sync-url.
 const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxviRf3TFbkwqpA_pP-Tc8zfRi8kNiy-oXEUqa3XAYALrR0xxeO7gEM7Is5ShXqUeSZ/exec';
 
+// Ratings used to be 1-5 stars; now they're a 0/25/50/75/100 percent-complete
+// scale. Old values are unambiguous (always <= 5) so they can be rescaled in place.
+function migrateRatings(songs) {
+  (songs || []).forEach(s => { if (s.rating > 0 && s.rating <= 5) s.rating = Math.round(s.rating / 5 * 4) * 25; });
+  return songs;
+}
 function loadPersisted() {
   const load = (key, fallback) => {
     try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; }
   };
-  state.songs = load('bq-songs', S_SONGS);
+  state.songs = migrateRatings(load('bq-songs', S_SONGS));
   state.setlists = load('bq-setlists', S_SETLISTS);
   state.jams = load('bq-jams', S_JAMS);
   state.members = load('bq-members', S_MEMBERS);
@@ -231,7 +237,7 @@ async function fetchRemote() {
     setSyncStatus('syncing');
     const res = await fetch(SYNC_URL);
     const data = await res.json();
-    if (data.songs) state.songs = data.songs;
+    if (data.songs) state.songs = migrateRatings(data.songs);
     if (data.setlists) state.setlists = data.setlists;
     if (data.jams) state.jams = data.jams;
     if (data.members) state.members = data.members;
@@ -534,15 +540,21 @@ function songDetailPlaylistPanel() {
     </div>`;
 }
 
-function starsHTML(rating, { interactive = false, size = '15px', songId = '' } = {}) {
-  const stars = [1, 2, 3, 4, 5].map(n => {
-    const filled = n <= (rating || 0);
-    const attrs = interactive ? `data-action="set-song-rating" data-id="${songId}" data-rating="${n}"` : '';
+function percentHTML(pct, { interactive = false, compact = false, songId = '' } = {}) {
+  const val = pct || 0;
+  const segW = compact ? '14px' : '24px';
+  const segH = compact ? '5px' : '9px';
+  const segs = [25, 50, 75, 100].map(q => {
+    const filled = q <= val;
+    const attrs = interactive ? `data-action="set-song-rating" data-id="${songId}" data-rating="${q}"` : '';
     const tag = interactive ? 'button' : 'span';
-    const base = css({ background: 'none', border: 'none', padding: 0, 'font-size': size, cursor: interactive ? 'pointer' : 'default', color: filled ? C.acc : C.border, 'line-height': 1 });
-    return `<${tag} ${attrs} style="${base}">${filled ? '★' : '☆'}</${tag}>`;
+    const base = css({ display: 'inline-block', width: segW, height: segH, 'border-radius': '2px', border: 'none', padding: 0, cursor: interactive ? 'pointer' : 'default', background: filled ? C.acc : C.border });
+    return `<${tag} ${attrs} style="${base}"></${tag}>`;
   }).join('');
-  return `<span style="${css({ display: 'inline-flex', gap: '1px', 'align-items': 'center' })}">${stars}</span>`;
+  return `<span style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '5px' })}">
+    <span style="${css({ display: 'inline-flex', gap: '2px' })}">${segs}</span>
+    <span style="${css({ 'font-size': compact ? '10px' : '12px', color: C.sub, 'font-weight': 600 })}">${val}%</span>
+  </span>`;
 }
 
 function songMetaWidgetHTML(song) {
@@ -554,8 +566,8 @@ function songMetaWidgetHTML(song) {
 
   return `<div style="${css({ display: 'flex', gap: '20px', 'align-items': 'center', 'flex-wrap': 'wrap' })}">
     <div>
-      ${lbl('Rating')}
-      <div>${starsHTML(song.rating, { interactive: true, size: '18px', songId: song.id })}</div>
+      ${lbl('Completion')}
+      <div>${percentHTML(song.rating, { interactive: true, songId: song.id })}</div>
     </div>
     <div style="${css({ flex: 1, 'min-width': '200px' })}">
       ${lbl(`Band Votes${votes.length ? ` (${votes.length})` : ''}`)}
@@ -672,7 +684,7 @@ function songCardHTML(song) {
       <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '15px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.title)}</div>
       ${song.artist ? `<div style="${css({ 'font-size': '11px', color: C.dim, 'margin-top': '2px', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' })}">${esc(song.artist)}</div>` : ''}
       <div style="${css({ display: 'flex', 'align-items': 'center', gap: '6px', 'margin-top': '4px' })}">
-        ${starsHTML(song.rating, { size: '10px' })}
+        ${percentHTML(song.rating, { compact: true })}
         ${voteCount ? `<span style="${css({ 'font-size': '10px', color: C.sage })}">${voteCount} vote${voteCount === 1 ? '' : 's'}</span>` : ''}
       </div>
     </div>
@@ -703,8 +715,8 @@ function groupSongs(filtered) {
     return groups;
   }
   if (mode === 'rating') {
-    return [5, 4, 3, 2, 1, 0]
-      .map(r => ({ label: r === 0 ? 'Unrated' : `${'★'.repeat(r)}${'☆'.repeat(5 - r)} (${r})`, songs: filtered.filter(s => (s.rating || 0) === r) }))
+    return [100, 75, 50, 25, 0]
+      .map(r => ({ label: r === 0 ? 'Not Started' : `${r}% Complete`, songs: filtered.filter(s => (s.rating || 0) === r) }))
       .filter(g => g.songs.length);
   }
   if (mode === 'status') {
@@ -727,7 +739,7 @@ function songsViewTemplate() {
     return ok && (!q || s.title.toLowerCase().includes(q) || (s.genre || '').toLowerCase().includes(q) || (s.tags || '').toLowerCase().includes(q));
   });
   const filterChips = ['all', 'ready', 'learning', 'shelved'].map(f => `<button data-action="set-song-filter" data-filter="${f}" style="${chipStyle(songFilter === f)}">${f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}</button>`).join('');
-  const sortChips = [['none', 'None'], ['artist', 'Artist'], ['setlist', 'Setlist'], ['status', 'Status'], ['rating', 'Rating'], ['votes', 'Votes']]
+  const sortChips = [['none', 'None'], ['artist', 'Artist'], ['setlist', 'Setlist'], ['status', 'Status'], ['rating', 'Completion'], ['votes', 'Votes']]
     .map(([v, label]) => `<button data-action="set-song-sort" data-sort="${v}" style="${chipStyle(songSort === v)}">${label}</button>`).join('');
 
   let body;
