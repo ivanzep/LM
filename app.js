@@ -152,6 +152,7 @@ const state = {
     songQuery: '',
     songSortKeys: ['status'],
     songGroupCollapsed: {},
+    songControlsCollapsed: true,
     slExpanded: null,
     slPicker: null,
     jamShowOpen: true,
@@ -672,6 +673,7 @@ function songDetailTemplate(song) {
 function openAddSongModal() { state.modal = { type: 'addSong' }; render(); }
 function setSongFilter(f) { state.ui.songFilter = f; render(); }
 function setSongQuery(q) { state.ui.songQuery = q; render(); }
+function toggleSongControls() { state.ui.songControlsCollapsed = !state.ui.songControlsCollapsed; render(); }
 function toggleSongSortKey(key) {
   if (key === 'none') { state.ui.songSortKeys = []; render(); return; }
   const keys = state.ui.songSortKeys.slice();
@@ -754,7 +756,7 @@ function groupSongs(filtered, keys) {
 }
 
 function songsViewTemplate() {
-  const { songFilter, songQuery, songSortKeys } = state.ui;
+  const { songFilter, songQuery, songSortKeys, songControlsCollapsed } = state.ui;
   const filtered = state.songs.filter(s => {
     const ok = songFilter === 'all' || (songFilter === 'active' ? s.status !== 'shelved' : s.status === songFilter);
     const q = songQuery.toLowerCase();
@@ -791,8 +793,8 @@ function songsViewTemplate() {
     }
   }
 
-  return `<div>
-    ${sh('Songs', `(${filtered.length})`, btn('+ Add Song', { action: 'open-add-song-modal', variant: 'primary' }))}
+  const controlsToggle = btn(`${songControlsCollapsed ? '▸' : '▾'} Filters`, { action: 'toggle-song-controls', sm: true });
+  const controls = songControlsCollapsed ? '' : `
     <div style="${css({ display: 'flex', gap: '8px', 'margin-bottom': '10px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
       <input id="song-search" value="${esc(songQuery)}" placeholder="Search by title, genre, tag…" style="${css({ background: C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '14px', padding: '8px 12px', outline: 'none', flex: 1, 'min-width': '150px', 'max-width': '220px' })}" />
       ${filterChips}
@@ -800,7 +802,11 @@ function songsViewTemplate() {
     <div style="${css({ display: 'flex', gap: '8px', 'margin-bottom': '16px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
       <span style="${css({ 'font-size': '11px', color: C.dim, 'text-transform': 'uppercase', 'letter-spacing': '0.05em' })}" title="Tap in order: first tap groups, later taps sort within each group">Group / sort</span>
       ${sortChips}
-    </div>
+    </div>`;
+
+  return `<div>
+    ${sh('Songs', `(${filtered.length})`, `${controlsToggle}${btn('+ Add Song', { action: 'open-add-song-modal', variant: 'primary' })}`)}
+    ${controls}
     ${body}
   </div>`;
 }
@@ -1453,6 +1459,7 @@ document.addEventListener('click', (e) => {
     case 'toggle-song-vote': toggleSongVote(el.dataset.id, el.dataset.memberId); return;
     case 'set-song-status': setSongStatus(el.dataset.id, el.dataset.status); return;
     case 'toggle-song-sort-key': toggleSongSortKey(el.dataset.key); return;
+    case 'toggle-song-controls': toggleSongControls(); return;
     case 'toggle-song-group': toggleSongGroupCollapse(el.dataset.key); return;
 
     case 'open-add-setlist-modal': openAddSetlistModal(); return;
