@@ -1378,7 +1378,7 @@ function modalTemplate() {
     return modalWrap(isAdd ? 'Propose a Date' : 'Edit Jam', `
       ${isAdd ? `<div style="${css({ 'font-size': '13px', color: C.sub, 'margin-bottom': '16px', background: C.raised, 'border-radius': '6px', padding: '8px 12px', 'line-height': 1.6 })}">${icon('bulb', 14)} Propose a date and the band votes In / Maybe / Out. Confirm it once there's enough interest.</div>` : ''}
       <div style="${css({ 'margin-bottom': '12px' })}">${lbl('Date *')}${inputHTML({ id: 'jf-date', value: jam.date, type: 'date' })}</div>
-      <div style="${css({ display: 'grid', 'grid-template-columns': '1fr 1fr 1fr', gap: '12px', 'margin-bottom': '12px' })}">
+      <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', 'margin-bottom': '12px' })}">
         <div>${lbl('Start Time')}${inputHTML({ id: 'jf-time', value: jam.time || '', type: 'time' })}</div>
         <div>${lbl('Duration (hr)')}<input id="jf-duration" type="number" step="0.25" min="0" placeholder="e.g. 2.5" value="${esc(hoursBetweenTimes(jam.time, jam.endTime))}" style="${css({ background: C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '14px', padding: '8px 12px', width: '100%', outline: 'none', 'box-sizing': 'border-box' })}" /></div>
         <div>${lbl('End Time')}${inputHTML({ id: 'jf-endTime', value: jam.endTime || '', type: 'time' })}</div>
