@@ -25,6 +25,18 @@ const ARRAY_FIELDS = { setlists: ['songIds'], songs: ['votes'] };
 const JSON_FIELDS = { jams: ['availability'] };
 const LEGACY_TAB = 'Data'; // old single-blob-per-row format, read as a fallback only
 
+// Fields that are date/time-shaped strings (YYYY-MM-DD / HH:MM). Sheets
+// auto-detects and silently converts these on write unless the column is
+// forced to plain-text format, which corrupts them on the next read (e.g.
+// "2026-07-04" round-trips as a Date object / serial number instead of the
+// original string) — this broke Jam saving/syncing since jams have three
+// such fields. DATE_FIELDS/TIME_FIELDS drive both the write-time format
+// lock and a read-time fallback that reformats a Date back to a string if
+// a cell was ever auto-converted (e.g. by data saved before this fix, or a
+// manual edit in the sheet).
+const DATE_FIELDS = { jams: ['date'], setlists: ['created'], reminders: ['dueDate'] };
+const TIME_FIELDS = { jams: ['time', 'endTime'] };
+
 // Row order used when writing each tab, so the sheet reads sensibly for
 // manual browsing rather than showing raw save-order.
 const SORTERS = {
@@ -54,6 +66,12 @@ function serializeCell_(key, field, value) {
 function deserializeCell_(key, field, value) {
   if ((ARRAY_FIELDS[key] || []).includes(field)) return String(value || '').split(',').map(s => s.trim()).filter(Boolean);
   if ((JSON_FIELDS[key] || []).includes(field)) { try { return JSON.parse(value || '{}'); } catch (e) { return {}; } }
+  if (value instanceof Date) {
+    const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+    if ((DATE_FIELDS[key] || []).includes(field)) return Utilities.formatDate(value, tz, 'yyyy-MM-dd');
+    if ((TIME_FIELDS[key] || []).includes(field)) return Utilities.formatDate(value, tz, 'HH:mm');
+    return value.toISOString();
+  }
   return value;
 }
 
@@ -89,6 +107,15 @@ function writeSection_(key, items) {
   const sorted = SORTERS[key] ? items.slice().sort(SORTERS[key]) : items;
   sheet.clearContents();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  // Lock date/time-shaped columns to plain text *before* writing values, so
+  // Sheets never auto-converts "2026-07-04" / "18:00" into a Date/time
+  // serial that would come back corrupted on the next read.
+  const textFields = [...(DATE_FIELDS[key] || []), ...(TIME_FIELDS[key] || [])];
+  const dataRowCount = Math.max(sorted.length, 1);
+  textFields.forEach(f => {
+    const col = headers.indexOf(f) + 1;
+    if (col > 0) sheet.getRange(2, col, dataRowCount, 1).setNumberFormat('@');
+  });
   if (sorted.length) {
     const rows = sorted.map(item => headers.map(h => serializeCell_(key, h, item[h])));
     sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
