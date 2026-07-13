@@ -1144,13 +1144,16 @@ function jamCalendarMonthHTML(year, month, jams) {
       bg = `${c}26`; border = c; color = C.txt;
     }
     if (isToday) { bg = 'transparent'; border = C.txt; }
-    const title = dayJams.length ? dayJams.map(j => `${fmtTimeRange(j) || 'Time TBD'}${j.location ? ' · ' + j.location : ''}`).join('\n') : 'Click to propose a jam';
+    const hasNoVote = dayJams.some(j => Object.values(j.availability || {}).includes('out'));
+    const xLine = `transparent calc(50% - 1px), ${C.org} calc(50% - 1px), ${C.org} calc(50% + 1px), transparent calc(50% + 1px)`;
+    const backgroundLayers = hasNoVote ? `linear-gradient(135deg, ${xLine}), linear-gradient(45deg, ${xLine}), ${bg}` : bg;
+    const title = dayJams.length ? dayJams.map(j => `${fmtTimeRange(j) || 'Time TBD'}${j.location ? ' · ' + j.location : ''}${Object.values(j.availability || {}).includes('out') ? ' · someone voted No' : ''}`).join('\n') : 'Click to propose a jam';
     const avail = (dayJams[0] && dayJams[0].availability) || {};
     const dots = dayJams.length ? state.members.filter(m => avail[m.id]).map(m => {
       const opacity = avail[m.id] === 'in' ? 1 : avail[m.id] === 'maybe' ? 0.55 : 0.2;
       return `<span style="${css({ width: '4px', height: '4px', 'border-radius': '50%', background: m.color, opacity, display: 'inline-block' })}"></span>`;
     }).join('') : '';
-    cells += `<div data-action="jam-cal-day" data-date="${dateStr}" title="${esc(title)}" style="${css({ 'font-size': '12px', color, background: bg, border: `1px solid ${border}`, 'border-radius': '5px', height: '38px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'center', gap: '2px', 'font-weight': isToday ? 700 : 400, position: 'relative', cursor: 'pointer' })}">
+    cells += `<div data-action="jam-cal-day" data-date="${dateStr}" title="${esc(title)}" style="${css({ 'font-size': '12px', color, background: backgroundLayers, border: `1px solid ${border}`, 'border-radius': '5px', height: '38px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'center', gap: '2px', 'font-weight': isToday ? 700 : 400, position: 'relative', cursor: 'pointer' })}">
       <span>${day}</span>
       ${dots ? `<span style="${css({ display: 'flex', gap: '2px', 'align-items': 'center' })}">${dots}</span>` : ''}
     </div>`;
@@ -1183,6 +1186,7 @@ function jamCalendarStripHTML() {
       <div style="${css({ display: 'flex', gap: '14px', 'font-size': '11px', color: C.sub })}">
         <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.sage}26`, border: `1px solid ${C.sage}`, 'margin-right': '5px' })}"></span>Confirmed</span>
         <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.acc}26`, border: `1px solid ${C.acc}`, 'margin-right': '5px' })}"></span>Proposed</span>
+        <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `linear-gradient(135deg, transparent calc(50% - 1px), ${C.org} calc(50% - 1px), ${C.org} calc(50% + 1px), transparent calc(50% + 1px)), linear-gradient(45deg, transparent calc(50% - 1px), ${C.org} calc(50% - 1px), ${C.org} calc(50% + 1px), transparent calc(50% + 1px))`, border: `1px solid ${C.border}`, 'margin-right': '5px' })}"></span>Someone voted No</span>
         <span style="${css({ color: C.dim })}">Hover a date for times</span>
       </div>
       ${navBtn(1, 'Next ▶')}
@@ -1195,7 +1199,10 @@ function jamsViewTemplate() {
   const upcoming = state.jams.filter(j => j.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date));
   const past = state.jams.filter(j => j.date < TODAY).sort((a, b) => b.date.localeCompare(a.date));
   const openJams = upcoming.filter(j => j.status === 'confirmed');
-  const proposed = upcoming.filter(j => j.status === 'proposed');
+  // A "No" vote from any member takes a proposed date off the active list —
+  // it stays in state.jams (and still shows on the calendar with an X) so
+  // nothing is deleted, it's just no longer a live option to track here.
+  const proposed = upcoming.filter(j => j.status === 'proposed' && !Object.values(j.availability || {}).includes('out'));
   const { jamShowOpen, jamShowProposed, jamShowPast } = state.ui;
 
   return `<div>
