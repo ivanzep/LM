@@ -650,8 +650,7 @@ function songDetailTemplate(song) {
     </div>
     <div style="${css({ display: 'flex', gap: '2px', background: '#080808', 'border-radius': '8px', padding: '3px', width: 'fit-content', 'margin-bottom': '10px' })}">${tabsRow}</div>
     <div style="${css({ border: `1px solid ${C.border}`, 'border-radius': '10px', overflow: 'hidden' })}">
-      <div id="sd-scrollbox" style="${css({ height: 'calc(100vh - 420px)', 'min-height': '220px', 'overflow-y': 'auto', background: sdTab === 'tabs' ? '#080808' : C.surf, padding: '20px 24px' })}">${content}</div>
-      <div style="${css({ background: C.raised, 'border-top': `1px solid ${C.border}`, padding: '9px 16px', display: 'flex', 'align-items': 'center', gap: '12px', 'flex-wrap': 'wrap' })}">
+      <div style="${css({ background: C.raised, 'border-bottom': `1px solid ${C.border}`, padding: '9px 16px', display: 'flex', 'align-items': 'center', gap: '12px', 'flex-wrap': 'wrap' })}">
         <button data-action="teleprompter-reset" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '12px', 'font-weight': 600, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '4px', padding: 0 })}">↑ Top</button>
         <div style="${css({ width: '1px', height: '16px', background: C.border })}"></div>
         <button id="sd-play-btn" data-action="teleprompter-toggle" style="${css({ background: sdPlaying ? `${C.org}1A` : `${C.acc}1A`, border: `1px solid ${sdPlaying ? C.org : C.acc}44`, color: sdPlaying ? C.org : C.acc, padding: '5px 14px', 'border-radius': '6px', cursor: 'pointer', 'font-size': '12px', 'font-weight': 700, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px' })}">${sdPlaying ? '⏸ Pause' : '▶ Auto-Scroll'}</button>
@@ -665,6 +664,7 @@ function songDetailTemplate(song) {
           <span id="sd-progress-label" style="${css({ 'font-size': '10px', color: C.dim, 'min-width': '28px', 'text-align': 'right' })}">0%</span>
         </div>
       </div>
+      <div id="sd-scrollbox" style="${css({ height: 'calc(100vh - 420px)', 'min-height': '220px', 'overflow-y': 'auto', background: sdTab === 'tabs' ? '#080808' : C.surf, padding: '20px 24px' })}">${content}</div>
     </div>
   </div>`;
 }
