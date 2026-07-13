@@ -133,7 +133,7 @@ const C = {
   lyrics: string,        // pre-formatted, uses \n
   tabs: string,          // ASCII tab notation, monospace
   notes: string,         // performance notes
-  rating: number,        // 0–5, set via clickable stars on the song detail page
+  rating: number,        // 0/25/50/75/100 — percent complete, set via a quarter-increment bar on the song detail page
   votes: string[],       // member IDs who voted for this song
 }
 ```
@@ -212,8 +212,8 @@ Embed URLs are generated via `getEmbedUrl(url)` — supports Spotify playlists/a
 
 | Section | What it does |
 |---|---|
-| Songs | Song list grid, filter/search, add modal, and a "Group by" row (None / Artist / Setlist / Status / Rating / Votes) that splits the grid into collapsible, labeled sections instead of reordering it — a song can appear in more than one section when grouped by Setlist. Deleting a song asks for confirmation first (title shown, Cancel/Delete). Shares the playlist player side panel (see below) so you can pick a reference playlist before opening a song |
-| Song Detail | Full-page song view with teleprompter auto-scroll (play/pause, speed 1–10, progress %), a 0–5 star rating, clickable Ready/Learning/Shelved status chips, and a band voting row (click a member's chip to toggle their vote) — none of these need the Edit Song modal. The playlist side panel lives in its own DOM mount (see Rendering model below), so filtering, grouping, searching, opening/closing a song, switching Lyrics/Tabs/Notes, rating, changing status, or voting never interrupt playback |
+| Songs | Song list grid, filter/search, add modal, and a "Group by" row (None / Artist / Setlist / Status / Completion / Votes) that splits the grid into collapsible, labeled sections instead of reordering it — a song can appear in more than one section when grouped by Setlist. Deleting a song asks for confirmation first (title shown, Cancel/Delete). Shares the playlist player side panel (see below) so you can pick a reference playlist before opening a song |
+| Song Detail | Full-page song view with teleprompter auto-scroll (play/pause, speed 1–10, progress %), a 0/25/50/75/100% completion bar, clickable Ready/Learning/Shelved status chips, and a band voting row (click a member's chip to toggle their vote) — none of these need the Edit Song modal. The playlist side panel lives in its own DOM mount (see Rendering model below), so filtering, grouping, searching, opening/closing a song, switching Lyrics/Tabs/Notes, changing completion, changing status, or voting never interrupt playback |
 | Setlists | Setlist CRUD, song picker, reorder with ▲▼ |
 | Jams | Three sections: Open / Proposed / Past (all collapsible), availability voting, optional start/end time |
 | Playlists | Per-member playlists with iframe embed toggle and an "Open Full Player" link (new tab, full-size — useful for Apple Music where the inline embed is cramped). Adding a playlist can also bulk-create songs (one per line) straight into the Songs section |
