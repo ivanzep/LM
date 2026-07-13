@@ -160,6 +160,7 @@ const state = {
     jamShowProposed: true,
     jamShowPast: false,
     jamCardOpen: {},
+    jamCalOffset: 0,
     plMemberFilter: 'all',
     plShowEmbed: {},
     remShowDone: false,
@@ -1042,7 +1043,8 @@ function proposedJamBlockTemplate(jam) {
         ${mayMembers.length > 0 ? `<span style="${css({ background: '#2B1013', color: C.acc, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${mayMembers.length}?</span>` : ''}
         ${outMembers.length > 0 ? `<span style="${css({ background: '#2B1510', color: C.org, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${outMembers.length}✗</span>` : ''}
         ${noMembers.length > 0 ? `<span style="${css({ background: C.raised, color: C.dim, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${noMembers.length}◌</span>` : ''}
-        <span style="${css({ color: C.dim, 'font-size': '12px', 'margin-left': '4px' })}">${open ? '▲' : '▼'}</span>
+        <button data-action="open-edit-jam-modal" data-id="${jam.id}" title="Edit" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '13px', padding: '2px 4px', 'margin-left': '4px' })}">✏</button>
+        <span style="${css({ color: C.dim, 'font-size': '12px' })}">${open ? '▲' : '▼'}</span>
       </div>
     </div>
     ${open ? `<div style="${css({ 'margin-top': '6px' })}">
@@ -1092,19 +1094,33 @@ function jamCalendarMonthHTML(year, month, jams) {
     <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(7, 1fr)', gap: '4px' })}">${cells}</div>
   </div>`;
 }
+function navJamCal(dir) { state.ui.jamCalOffset += dir; render(); }
 function jamCalendarStripHTML() {
   const withDates = state.jams.filter(j => j.date);
-  if (!withDates.length) return '';
-  const months = new Map();
-  withDates.forEach(j => { const key = j.date.slice(0, 7); if (!months.has(key)) months.set(key, []); months.get(key).push(j); });
-  const grids = [...months.keys()].sort().map(key => { const [y, m] = key.split('-').map(Number); return jamCalendarMonthHTML(y, m - 1, months.get(key)); }).join('');
+  const byMonth = new Map();
+  withDates.forEach(j => { const key = j.date.slice(0, 7); if (!byMonth.has(key)) byMonth.set(key, []); byMonth.get(key).push(j); });
+
+  const today = new Date();
+  const baseIndex = today.getFullYear() * 12 + today.getMonth() + state.ui.jamCalOffset;
+  const navBtn = (dir, label) => `<button data-action="jam-cal-nav" data-dir="${dir}" style="${css({ background: C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.txt, cursor: 'pointer', padding: '5px 12px', 'font-size': '13px', 'font-weight': 600, 'font-family': "'DM Sans', sans-serif" })}">${label}</button>`;
+  const grids = [0, 1].map(i => {
+    const idx = baseIndex + i;
+    const y = Math.floor(idx / 12), m = idx % 12;
+    const key = `${y}-${String(m + 1).padStart(2, '0')}`;
+    return jamCalendarMonthHTML(y, m, byMonth.get(key) || []);
+  }).join('');
+
   return `<div style="${css({ 'margin-bottom': '22px' })}">
-    <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', width: '100%', 'margin-bottom': '8px' })}">${grids}</div>
-    <div style="${css({ display: 'flex', gap: '14px', 'font-size': '11px', color: C.sub })}">
-      <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.sage}26`, border: `1px solid ${C.sage}`, 'margin-right': '5px' })}"></span>Confirmed</span>
-      <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.acc}26`, border: `1px solid ${C.acc}`, 'margin-right': '5px' })}"></span>Proposed</span>
-      <span style="${css({ color: C.dim })}">Hover a date for times</span>
+    <div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '10px' })}">
+      ${navBtn(-1, '◀ Prev')}
+      <div style="${css({ display: 'flex', gap: '14px', 'font-size': '11px', color: C.sub })}">
+        <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.sage}26`, border: `1px solid ${C.sage}`, 'margin-right': '5px' })}"></span>Confirmed</span>
+        <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.acc}26`, border: `1px solid ${C.acc}`, 'margin-right': '5px' })}"></span>Proposed</span>
+        <span style="${css({ color: C.dim })}">Hover a date for times</span>
+      </div>
+      ${navBtn(1, 'Next ▶')}
     </div>
+    <div style="${css({ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '12px', width: '100%' })}">${grids}</div>
   </div>`;
 }
 
@@ -1564,6 +1580,7 @@ document.addEventListener('click', (e) => {
     case 'confirm-jam': confirmJam(id); return;
     case 'unconfirm-jam': unconfirmJam(id); return;
     case 'toggle-jam-section': toggleJamSection(el.dataset.section); return;
+    case 'jam-cal-nav': navJamCal(Number(el.dataset.dir)); return;
     case 'toggle-jam-card': toggleJamCard(id); return;
     case 'cycle-jam-avail': cycleJamAvail(el.dataset.jamId, el.dataset.memberId); return;
 
