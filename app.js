@@ -1061,6 +1061,49 @@ function collapseHead(show, section, icon, label, count, color) {
   </div>`;
 }
 
+function jamCalendarMonthHTML(year, month, jams) {
+  const byDay = {};
+  jams.forEach(j => { const day = Number(j.date.slice(8, 10)); (byDay[day] = byDay[day] || []).push(j); });
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthLabel = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const dowRow = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<div style="${css({ 'font-size': '9px', color: C.dim, 'text-align': 'center', 'font-weight': 700 })}">${d}</div>`).join('');
+  let cells = '';
+  for (let i = 0; i < firstDow; i++) cells += `<div></div>`;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayJams = byDay[day] || [];
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const isToday = dateStr === TODAY;
+    let bg = 'transparent', border = 'transparent', color = C.sub;
+    if (dayJams.length) {
+      const c = dayJams.some(j => j.status === 'confirmed') ? C.sage : C.acc;
+      bg = `${c}26`; border = c; color = C.txt;
+    }
+    const title = dayJams.map(j => `${fmtTimeRange(j) || 'Time TBD'}${j.location ? ' · ' + j.location : ''}`).join('\n');
+    cells += `<div title="${esc(title)}" style="${css({ 'font-size': '11px', color, background: bg, border: `1px solid ${border}`, 'border-radius': '5px', height: '24px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-weight': isToday ? 700 : 400, position: 'relative' })}">${day}${isToday ? `<span style="${css({ position: 'absolute', bottom: '2px', width: '3px', height: '3px', 'border-radius': '50%', background: C.acc })}"></span>` : ''}</div>`;
+  }
+  return `<div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '12px', 'min-width': '210px' })}">
+    <div style="${css({ 'font-size': '12px', 'font-weight': 700, color: C.txt, 'margin-bottom': '8px', 'text-transform': 'uppercase', 'letter-spacing': '0.04em' })}">${monthLabel}</div>
+    <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(7, 1fr)', gap: '3px', 'margin-bottom': '4px' })}">${dowRow}</div>
+    <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(7, 1fr)', gap: '3px' })}">${cells}</div>
+  </div>`;
+}
+function jamCalendarStripHTML() {
+  const withDates = state.jams.filter(j => j.date);
+  if (!withDates.length) return '';
+  const months = new Map();
+  withDates.forEach(j => { const key = j.date.slice(0, 7); if (!months.has(key)) months.set(key, []); months.get(key).push(j); });
+  const grids = [...months.keys()].sort().map(key => { const [y, m] = key.split('-').map(Number); return jamCalendarMonthHTML(y, m - 1, months.get(key)); }).join('');
+  return `<div style="${css({ 'margin-bottom': '22px' })}">
+    <div style="${css({ display: 'flex', gap: '12px', 'flex-wrap': 'wrap', 'margin-bottom': '8px' })}">${grids}</div>
+    <div style="${css({ display: 'flex', gap: '14px', 'font-size': '11px', color: C.sub })}">
+      <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.sage}26`, border: `1px solid ${C.sage}`, 'margin-right': '5px' })}"></span>Confirmed</span>
+      <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.acc}26`, border: `1px solid ${C.acc}`, 'margin-right': '5px' })}"></span>Proposed</span>
+      <span style="${css({ color: C.dim })}">Hover a date for times</span>
+    </div>
+  </div>`;
+}
+
 function jamsViewTemplate() {
   const upcoming = state.jams.filter(j => j.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date));
   const past = state.jams.filter(j => j.date < TODAY).sort((a, b) => b.date.localeCompare(a.date));
@@ -1070,6 +1113,7 @@ function jamsViewTemplate() {
 
   return `<div>
     ${sh('Jams', '', btn('+ Propose Date', { action: 'open-add-jam-modal', variant: 'primary' }))}
+    ${jamCalendarStripHTML()}
     <div style="${css({ 'margin-bottom': '22px' })}">
       ${collapseHead(jamShowOpen, 'open', '●', 'Open Jams', openJams.length, C.sage)}
       ${jamShowOpen ? (openJams.length === 0 ? `<div style="${css({ 'font-size': '13px', color: C.dim, padding: '6px 0 4px', 'line-height': 1.6 })}">No confirmed jams yet — confirm a proposal once the band votes in.</div>` : openJams.map(j => jamCardTemplate(j, 'open')).join('')) : ''}
