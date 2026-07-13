@@ -1270,7 +1270,7 @@ function topBarTemplate() {
   return `<div style="${css({ background: C.surf, 'border-bottom': `1px solid ${C.border}`, padding: '0 16px', height: '52px', display: 'flex', 'align-items': 'center', gap: '6px', position: 'sticky', top: 0, 'z-index': 40 })}">
     <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '16px', 'font-weight': 600, color: C.acc, 'letter-spacing': '0.1em', 'margin-right': '10px', 'white-space': 'nowrap', display: 'flex', 'align-items': 'center', gap: '5px' })}">LUCKY MACHOS</div>
     <div id="main-nav-tabs" style="${css({ display: 'flex', gap: '2px', flex: 1, 'overflow-x': 'auto' })}">${items}</div>
-    <div id="hamburger-wrapper" style="${css({ position: 'relative', flexShrink: 0, 'margin-left': '8px' })}">
+    <div id="hamburger-wrapper" style="${css({ position: 'relative', flexShrink: 0, 'margin-left': 'auto' })}">
       <button data-action="toggle-menu" title="Menu" style="${css({ background: 'none', border: 'none', color: C.sub, cursor: 'pointer', 'font-size': '17px', padding: '4px 6px', position: 'relative' })}">☰${pendingRem > 0 ? `<span style="${css({ position: 'absolute', top: '2px', right: '2px', width: '7px', height: '7px', 'border-radius': '50%', background: C.org })}"></span>` : ''}</button>
       ${state.ui.menuOpen ? `<div style="${css({ position: 'absolute', top: '100%', right: 0, background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '8px', padding: '4px', 'min-width': '190px', 'max-width': '80vw', 'z-index': 60, 'box-shadow': '0 8px 24px #00000066' })}">
         <div class="mobile-nav-section">
