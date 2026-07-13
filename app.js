@@ -792,7 +792,7 @@ function songsViewTemplate() {
   }
 
   return `<div>
-    ${sh('Songs', `(${state.songs.length})`, btn('+ Add Song', { action: 'open-add-song-modal', variant: 'primary' }))}
+    ${sh('Songs', `(${filtered.length})`, btn('+ Add Song', { action: 'open-add-song-modal', variant: 'primary' }))}
     <div style="${css({ display: 'flex', gap: '8px', 'margin-bottom': '10px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
       <input id="song-search" value="${esc(songQuery)}" placeholder="Search by title, genre, tag…" style="${css({ background: C.raised, border: `1px solid ${C.border}`, 'border-radius': '6px', color: C.txt, 'font-family': "'DM Sans', sans-serif", 'font-size': '14px', padding: '8px 12px', outline: 'none', flex: 1, 'min-width': '150px', 'max-width': '220px' })}" />
       ${filterChips}
