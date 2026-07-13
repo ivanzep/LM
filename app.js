@@ -421,10 +421,23 @@ function readSongForm() {
 
 // ── Song Detail Page (teleprompter) ────────────────────────────
 let sdTab = 'lyrics', sdPlaying = false, sdSpeed = 3, sdInterval = null, sdPlaylistId = '';
+// Which section the "← Back" link in song detail returns to — 'songs' when
+// opened from the Songs list itself, or another nav id (e.g. 'setlists')
+// when opened from elsewhere, so the back link doesn't strand the user in
+// a section they never asked to be in.
+let songBackNav = 'songs';
 
 function stopTeleprompterInterval() { if (sdInterval) { clearInterval(sdInterval); sdInterval = null; } }
-function openSong(song) { state.songPage = song; sdTab = 'lyrics'; sdPlaying = false; sdSpeed = 3; stopTeleprompterInterval(); render(); }
-function closeSong() { stopTeleprompterInterval(); state.songPage = null; render(); }
+function openSong(song, backNav = 'songs') { state.songPage = song; songBackNav = backNav; sdTab = 'lyrics'; sdPlaying = false; sdSpeed = 3; stopTeleprompterInterval(); render(); }
+function closeSong() {
+  stopTeleprompterInterval();
+  state.songPage = null;
+  if (songBackNav !== 'songs' && songBackNav !== state.nav) {
+    state.nav = songBackNav;
+    if (location.hash.slice(1) !== songBackNav) history.replaceState(null, '', '#' + songBackNav);
+  }
+  render();
+}
 // Opens a song's detail page from a section other than Songs (e.g. a
 // setlist song row). Switches nav via history.replaceState rather than
 // location.hash, so the hashchange listener's goToNav() — which always
@@ -433,8 +446,9 @@ function closeSong() { stopTeleprompterInterval(); state.songPage = null; render
 function openSongFrom(id) {
   const song = state.songs.find(s => s.id === id);
   if (!song) return;
+  const fromNav = state.nav;
   state.nav = 'songs';
-  openSong(song);
+  openSong(song, fromNav);
   if (location.hash.slice(1) !== 'songs') history.replaceState(null, '', '#songs');
 }
 function switchSongTab(t) {
@@ -661,7 +675,7 @@ function songDetailTemplate(song) {
 
   return `<div>
     <div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '20px' })}">
-      <button data-action="back-to-songs" style="${css({ background: 'none', border: 'none', color: C.txt, cursor: 'pointer', 'font-family': "'Bebas Neue', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em', display: 'flex', 'align-items': 'center', gap: '6px', padding: 0 })}">← Songs</button>
+      <button data-action="back-to-songs" style="${css({ background: 'none', border: 'none', color: C.txt, cursor: 'pointer', 'font-family': "'Bebas Neue', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em', display: 'flex', 'align-items': 'center', gap: '6px', padding: 0 })}">← ${esc((NAV.find(n => n.id === songBackNav) || MENU_NAV.find(n => n.id === songBackNav) || { label: 'Songs' }).label)}</button>
       ${btn('✏ Edit Song', { action: 'open-edit-song-modal', data: { id: song.id } })}
     </div>
     <div style="${css({ 'margin-bottom': '18px', 'padding-bottom': '18px', 'border-bottom': `1px solid ${C.border}` })}">
