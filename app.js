@@ -148,7 +148,7 @@ const state = {
   playlists: S_PLAYLISTS,
   modal: null,
   ui: {
-    songFilter: 'all',
+    songFilter: 'active',
     songQuery: '',
     songSortKeys: ['status'],
     songGroupCollapsed: {},
@@ -756,11 +756,11 @@ function groupSongs(filtered, keys) {
 function songsViewTemplate() {
   const { songFilter, songQuery, songSortKeys } = state.ui;
   const filtered = state.songs.filter(s => {
-    const ok = songFilter === 'all' || s.status === songFilter;
+    const ok = songFilter === 'all' || (songFilter === 'active' ? s.status !== 'shelved' : s.status === songFilter);
     const q = songQuery.toLowerCase();
     return ok && (!q || s.title.toLowerCase().includes(q) || (s.genre || '').toLowerCase().includes(q) || (s.tags || '').toLowerCase().includes(q));
   });
-  const filterChips = ['all', 'ready', 'learning', 'shelved'].map(f => `<button data-action="set-song-filter" data-filter="${f}" style="${chipStyle(songFilter === f)}">${f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}</button>`).join('');
+  const filterChips = ['all', 'active', 'ready', 'learning', 'shelved'].map(f => `<button data-action="set-song-filter" data-filter="${f}" style="${chipStyle(songFilter === f)}">${f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}</button>`).join('');
   const noneChip = `<button data-action="toggle-song-sort-key" data-key="none" style="${chipStyle(songSortKeys.length === 0)}">None</button>`;
   const sortChips = noneChip + [['artist', 'Artist'], ['setlist', 'Setlist'], ['status', 'Status'], ['rating', 'Completion'], ['votes', 'Votes']]
     .map(([v, label]) => {
@@ -771,7 +771,7 @@ function songsViewTemplate() {
 
   let body;
   if (filtered.length === 0) {
-    body = empty('pick', songQuery || songFilter !== 'all' ? 'No songs match.' : 'Add your first song!');
+    body = empty('pick', state.songs.length === 0 ? 'Add your first song!' : 'No songs match.');
   } else {
     const groups = groupSongs(filtered, songSortKeys);
     if (groups === null) {
