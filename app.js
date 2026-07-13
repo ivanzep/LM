@@ -150,7 +150,7 @@ const state = {
   ui: {
     songFilter: 'all',
     songQuery: '',
-    songSort: 'status',
+    songSortKeys: ['status'],
     songGroupCollapsed: {},
     slExpanded: null,
     slPicker: null,
@@ -672,7 +672,14 @@ function songDetailTemplate(song) {
 function openAddSongModal() { state.modal = { type: 'addSong' }; render(); }
 function setSongFilter(f) { state.ui.songFilter = f; render(); }
 function setSongQuery(q) { state.ui.songQuery = q; render(); }
-function setSongSort(s) { state.ui.songSort = s; render(); }
+function toggleSongSortKey(key) {
+  if (key === 'none') { state.ui.songSortKeys = []; render(); return; }
+  const keys = state.ui.songSortKeys.slice();
+  const idx = keys.indexOf(key);
+  if (idx === -1) keys.push(key); else keys.splice(idx, 1);
+  state.ui.songSortKeys = keys;
+  render();
+}
 function toggleSongGroupCollapse(key) { state.ui.songGroupCollapsed[key] = !state.ui.songGroupCollapsed[key]; render(); }
 
 function songCardHTML(song) {
@@ -692,8 +699,25 @@ function songCardHTML(song) {
   </div>`;
 }
 
-function groupSongs(filtered) {
-  const mode = state.ui.songSort;
+// Comparators used to order songs *within* a group, for every key after the
+// first (which instead determines the grouping itself — see groupSongs).
+function songSortComparator(key) {
+  if (key === 'artist') return (a, b) => (a.artist || '').localeCompare(b.artist || '');
+  if (key === 'status') { const ord = { ready: 0, learning: 1, shelved: 2 }; return (a, b) => (ord[a.status] ?? 3) - (ord[b.status] ?? 3); }
+  if (key === 'rating') return (a, b) => (b.rating || 0) - (a.rating || 0);
+  if (key === 'votes') return (a, b) => (b.votes || []).length - (a.votes || []).length;
+  return null; // 'setlist' has no single per-song value to sort by within an already-grouped bucket
+}
+function applySecondarySort(songs, keys) {
+  const comparators = keys.map(songSortComparator).filter(Boolean);
+  if (!comparators.length) return songs;
+  return [...songs].sort((a, b) => comparators.reduce((acc, cmp) => acc || cmp(a, b), 0) || a.title.localeCompare(b.title));
+}
+
+function groupSongs(filtered, keys) {
+  if (!keys.length) return null;
+  const [mode, ...rest] = keys;
+  let groups;
   if (mode === 'artist') {
     const map = new Map();
     filtered.forEach(s => {
@@ -701,10 +725,9 @@ function groupSongs(filtered) {
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(s);
     });
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([label, songs]) => ({ label, songs: [...songs].sort((a, b) => a.title.localeCompare(b.title)) }));
-  }
-  if (mode === 'setlist') {
-    const groups = [];
+    groups = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([label, songs]) => ({ label, songs: [...songs].sort((a, b) => a.title.localeCompare(b.title)) }));
+  } else if (mode === 'setlist') {
+    groups = [];
     const used = new Set();
     state.setlists.forEach(sl => {
       const songs = (sl.songIds || []).map(id => filtered.find(s => s.id === id)).filter(Boolean);
@@ -712,46 +735,50 @@ function groupSongs(filtered) {
     });
     const leftover = filtered.filter(s => !used.has(s.id));
     if (leftover.length) groups.push({ label: 'Not in a Setlist', songs: leftover });
-    return groups;
-  }
-  if (mode === 'rating') {
-    return [100, 75, 50, 25, 0]
+  } else if (mode === 'rating') {
+    groups = [100, 75, 50, 25, 0]
       .map(r => ({ label: r === 0 ? 'Not Started' : `${r}% Complete`, songs: filtered.filter(s => (s.rating || 0) === r) }))
       .filter(g => g.songs.length);
-  }
-  if (mode === 'status') {
+  } else if (mode === 'status') {
     const order = [['ready', 'Ready'], ['learning', 'Learning'], ['shelved', 'Shelved']];
-    return order.map(([s, label]) => ({ label, songs: filtered.filter(x => x.status === s) })).filter(g => g.songs.length);
-  }
-  if (mode === 'votes') {
+    groups = order.map(([s, label]) => ({ label, songs: filtered.filter(x => x.status === s) })).filter(g => g.songs.length);
+  } else if (mode === 'votes') {
     const map = new Map();
     filtered.forEach(s => { const c = (s.votes || []).length; if (!map.has(c)) map.set(c, []); map.get(c).push(s); });
-    return [...map.entries()].sort((a, b) => b[0] - a[0]).map(([count, songs]) => ({ label: `${count} vote${count === 1 ? '' : 's'}`, songs }));
+    groups = [...map.entries()].sort((a, b) => b[0] - a[0]).map(([count, songs]) => ({ label: `${count} vote${count === 1 ? '' : 's'}`, songs }));
+  } else {
+    return null;
   }
-  return null;
+  if (rest.length) groups.forEach(g => { g.songs = applySecondarySort(g.songs, rest); });
+  return groups;
 }
 
 function songsViewTemplate() {
-  const { songFilter, songQuery, songSort } = state.ui;
+  const { songFilter, songQuery, songSortKeys } = state.ui;
   const filtered = state.songs.filter(s => {
     const ok = songFilter === 'all' || s.status === songFilter;
     const q = songQuery.toLowerCase();
     return ok && (!q || s.title.toLowerCase().includes(q) || (s.genre || '').toLowerCase().includes(q) || (s.tags || '').toLowerCase().includes(q));
   });
   const filterChips = ['all', 'ready', 'learning', 'shelved'].map(f => `<button data-action="set-song-filter" data-filter="${f}" style="${chipStyle(songFilter === f)}">${f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}</button>`).join('');
-  const sortChips = [['none', 'None'], ['artist', 'Artist'], ['setlist', 'Setlist'], ['status', 'Status'], ['rating', 'Completion'], ['votes', 'Votes']]
-    .map(([v, label]) => `<button data-action="set-song-sort" data-sort="${v}" style="${chipStyle(songSort === v)}">${label}</button>`).join('');
+  const noneChip = `<button data-action="toggle-song-sort-key" data-key="none" style="${chipStyle(songSortKeys.length === 0)}">None</button>`;
+  const sortChips = noneChip + [['artist', 'Artist'], ['setlist', 'Setlist'], ['status', 'Status'], ['rating', 'Completion'], ['votes', 'Votes']]
+    .map(([v, label]) => {
+      const order = songSortKeys.indexOf(v) + 1;
+      const badge = order > 0 ? `<span style="${css({ display: 'inline-flex', 'align-items': 'center', 'justify-content': 'center', width: '14px', height: '14px', 'border-radius': '50%', background: C.bg, color: C.acc, 'font-size': '9px', 'font-weight': 700, 'margin-left': '5px' })}">${order}</span>` : '';
+      return `<button data-action="toggle-song-sort-key" data-key="${v}" style="${chipStyle(order > 0)}">${label}${badge}</button>`;
+    }).join('');
 
   let body;
   if (filtered.length === 0) {
     body = empty('pick', songQuery || songFilter !== 'all' ? 'No songs match.' : 'Add your first song!');
   } else {
-    const groups = groupSongs(filtered);
+    const groups = groupSongs(filtered, songSortKeys);
     if (groups === null) {
       body = `<div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' })}">${filtered.map(songCardHTML).join('')}</div>`;
     } else {
       body = groups.map(g => {
-        const key = `${songSort}:${g.label}`;
+        const key = `${songSortKeys[0]}:${g.label}`;
         const collapsed = !!state.ui.songGroupCollapsed[key];
         return `<div style="${css({ 'margin-bottom': '20px' })}">
           <div data-action="toggle-song-group" data-key="${esc(key)}" style="${css({ cursor: 'pointer', display: 'flex', 'align-items': 'center', gap: '8px', 'margin-bottom': collapsed ? 0 : '8px', 'user-select': 'none' })}">
@@ -771,7 +798,7 @@ function songsViewTemplate() {
       ${filterChips}
     </div>
     <div style="${css({ display: 'flex', gap: '8px', 'margin-bottom': '16px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
-      <span style="${css({ 'font-size': '11px', color: C.dim, 'text-transform': 'uppercase', 'letter-spacing': '0.05em' })}">Group by</span>
+      <span style="${css({ 'font-size': '11px', color: C.dim, 'text-transform': 'uppercase', 'letter-spacing': '0.05em' })}" title="Tap in order: first tap groups, later taps sort within each group">Group / sort</span>
       ${sortChips}
     </div>
     ${body}
@@ -1425,7 +1452,7 @@ document.addEventListener('click', (e) => {
     case 'set-song-rating': setSongRating(el.dataset.id, Number(el.dataset.rating)); return;
     case 'toggle-song-vote': toggleSongVote(el.dataset.id, el.dataset.memberId); return;
     case 'set-song-status': setSongStatus(el.dataset.id, el.dataset.status); return;
-    case 'set-song-sort': setSongSort(el.dataset.sort); return;
+    case 'toggle-song-sort-key': toggleSongSortKey(el.dataset.key); return;
     case 'toggle-song-group': toggleSongGroupCollapse(el.dataset.key); return;
 
     case 'open-add-setlist-modal': openAddSetlistModal(); return;
