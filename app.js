@@ -927,6 +927,11 @@ function unconfirmJam(id) { updJams(state.jams.map(j => j.id === id ? { ...j, st
 function deleteJam(id) { updJams(state.jams.filter(j => j.id !== id)); render(); }
 function openAddJamModal() { state.modal = { type: 'addJam' }; render(); }
 function openEditJamModal(id) { state.modal = { type: 'editJam', id }; render(); }
+function openJamDayModal(dateStr) {
+  const hasJams = state.jams.some(j => j.date === dateStr);
+  state.modal = hasJams ? { type: 'dayJams', date: dateStr } : { type: 'addJam', date: dateStr };
+  render();
+}
 function addHoursToTime(time, hours) {
   const [h, m] = time.split(':').map(Number);
   const total = ((h * 60 + m + Math.round(hours * 60)) % 1440 + 1440) % 1440;
@@ -1085,8 +1090,17 @@ function jamCalendarMonthHTML(year, month, jams) {
       const c = dayJams.some(j => j.status === 'confirmed') ? C.sage : C.acc;
       bg = `${c}26`; border = c; color = C.txt;
     }
-    const title = dayJams.map(j => `${fmtTimeRange(j) || 'Time TBD'}${j.location ? ' · ' + j.location : ''}`).join('\n');
-    cells += `<div title="${esc(title)}" style="${css({ 'font-size': '12px', color, background: bg, border: `1px solid ${border}`, 'border-radius': '5px', height: '32px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-weight': isToday ? 700 : 400, position: 'relative' })}">${day}${isToday ? `<span style="${css({ position: 'absolute', bottom: '3px', width: '3px', height: '3px', 'border-radius': '50%', background: C.acc })}"></span>` : ''}</div>`;
+    if (isToday) { bg = 'transparent'; border = C.txt; }
+    const title = dayJams.length ? dayJams.map(j => `${fmtTimeRange(j) || 'Time TBD'}${j.location ? ' · ' + j.location : ''}`).join('\n') : 'Click to propose a jam';
+    const avail = (dayJams[0] && dayJams[0].availability) || {};
+    const dots = dayJams.length ? state.members.filter(m => avail[m.id]).map(m => {
+      const opacity = avail[m.id] === 'in' ? 1 : avail[m.id] === 'maybe' ? 0.55 : 0.2;
+      return `<span style="${css({ width: '4px', height: '4px', 'border-radius': '50%', background: m.color, opacity, display: 'inline-block' })}"></span>`;
+    }).join('') : '';
+    cells += `<div data-action="jam-cal-day" data-date="${dateStr}" title="${esc(title)}" style="${css({ 'font-size': '12px', color, background: bg, border: `1px solid ${border}`, 'border-radius': '5px', height: '38px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'center', gap: '2px', 'font-weight': isToday ? 700 : 400, position: 'relative', cursor: 'pointer' })}">
+      <span>${day}</span>
+      ${dots ? `<span style="${css({ display: 'flex', gap: '2px', 'align-items': 'center' })}">${dots}</span>` : ''}
+    </div>`;
   }
   return `<div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '14px', width: '100%', 'box-sizing': 'border-box' })}">
     <div style="${css({ 'font-size': '13px', 'font-weight': 700, color: C.txt, 'margin-bottom': '10px', 'text-transform': 'uppercase', 'letter-spacing': '0.04em' })}">${monthLabel}</div>
@@ -1438,7 +1452,7 @@ function modalTemplate() {
   }
   if (m.type === 'addJam' || m.type === 'editJam') {
     const isAdd = m.type === 'addJam';
-    const jam = isAdd ? { date: '', time: '', endTime: '', location: '', notes: '' } : state.jams.find(j => j.id === m.id);
+    const jam = isAdd ? { date: m.date || '', time: '', endTime: '', location: '', notes: '' } : state.jams.find(j => j.id === m.id);
     return modalWrap(isAdd ? 'Propose a Date' : 'Edit Jam', `
       ${isAdd ? `<div style="${css({ 'font-size': '13px', color: C.sub, 'margin-bottom': '16px', background: C.raised, 'border-radius': '6px', padding: '8px 12px', 'line-height': 1.6 })}">${icon('bulb', 14)} Propose a date and the band votes In / Maybe / Out. Confirm it once there's enough interest.</div>` : ''}
       <div style="${css({ 'margin-bottom': '12px' })}">${lbl('Date *')}${inputHTML({ id: 'jf-date', value: jam.date, type: 'date' })}</div>
@@ -1454,6 +1468,32 @@ function modalTemplate() {
         ${btn(isAdd ? 'Submit Proposal' : 'Save Changes', { action: 'save-jam', data: { mode: isAdd ? 'add' : 'edit', id: m.id || '' }, variant: 'primary' })}
       </div>
     `);
+  }
+  if (m.type === 'dayJams') {
+    const jamsOnDate = state.jams.filter(j => j.date === m.date);
+    if (!jamsOnDate.length) return '';
+    const body = jamsOnDate.map(jam => {
+      const avail = jam.availability || {};
+      const inMembers = state.members.filter(mm => avail[mm.id] === 'in');
+      const total = state.members.length;
+      const canConfirm = inMembers.length >= Math.ceil(total / 2);
+      return `<div style="${css({ 'margin-bottom': '18px', 'padding-bottom': '18px', 'border-bottom': `1px solid ${C.border}` })}">
+        <div style="${css({ display: 'flex', 'align-items': 'center', gap: '8px', 'margin-bottom': '4px', 'flex-wrap': 'wrap' })}">
+          ${jam.time ? `<span style="${css({ color: C.acc, 'font-size': '14px', 'font-weight': 600 })}">${fmtTimeRange(jam)}</span>` : `<span style="${css({ color: C.dim, 'font-size': '13px' })}">Time TBD</span>`}
+          <span style="${css({ background: jam.status === 'confirmed' ? '#1D2B18' : '#2B1013', color: jam.status === 'confirmed' ? C.sage : C.acc, padding: '2px 8px', 'border-radius': '4px', 'font-size': '10px', 'font-weight': 700, 'text-transform': 'uppercase', 'letter-spacing': '0.03em' })}">${jam.status}</span>
+        </div>
+        ${jam.location ? `<div style="${css({ 'font-size': '12px', color: C.sub, 'margin-bottom': '10px' })}">${icon('pin', 13)} ${esc(jam.location)}</div>` : ''}
+        <div style="${css({ border: `1px solid ${C.border}`, 'border-radius': '8px', overflow: 'hidden', 'margin-bottom': '10px' })}">${state.members.map(mm => jamMemberRow(jam, mm, true)).join('')}</div>
+        <div style="${css({ display: 'flex', gap: '8px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
+          ${jam.status === 'proposed'
+            ? `<button data-action="confirm-jam" data-id="${jam.id}" style="${css({ background: canConfirm ? C.sage : 'transparent', color: canConfirm ? C.bg : C.sage, border: `1.5px solid ${C.sage}`, padding: '5px 14px', 'border-radius': '6px', cursor: 'pointer', 'font-size': '12px', 'font-weight': 700, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px' })}">${canConfirm ? `${icon('checkCircle', 14)} Confirm Jam` : `Confirm (${inMembers.length}/${Math.ceil(total / 2)} votes)`}</button>`
+            : btn('↩ Unconfirm', { action: 'unconfirm-jam', data: { id: jam.id }, sm: true })}
+          ${btn('✏ Edit', { action: 'open-edit-jam-modal', data: { id: jam.id }, sm: true })}
+          ${btn('Delete', { action: 'delete-jam', data: { id: jam.id }, sm: true, variant: 'danger' })}
+        </div>
+      </div>`;
+    }).join('');
+    return modalWrap(fmtDate(m.date), body);
   }
   if (m.type === 'addPlaylist') {
     const detected = 'link';
@@ -1581,6 +1621,7 @@ document.addEventListener('click', (e) => {
     case 'unconfirm-jam': unconfirmJam(id); return;
     case 'toggle-jam-section': toggleJamSection(el.dataset.section); return;
     case 'jam-cal-nav': navJamCal(Number(el.dataset.dir)); return;
+    case 'jam-cal-day': openJamDayModal(el.dataset.date); return;
     case 'toggle-jam-card': toggleJamCard(id); return;
     case 'cycle-jam-avail': cycleJamAvail(el.dataset.jamId, el.dataset.memberId); return;
 
