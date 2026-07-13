@@ -634,6 +634,7 @@ function songDetailTemplate(song) {
   const tagsHTML = song.tags ? `<div style="${css({ display: 'flex', gap: '4px', 'flex-wrap': 'wrap', 'margin-bottom': '10px' })}">${song.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `<span style="${css({ background: C.raised, color: C.dim, padding: '1px 7px', 'border-radius': '3px', 'font-size': '10px', border: `1px solid ${C.border}` })}">${esc(t)}</span>`).join('')}</div>` : '';
   const detailsCollapsed = state.ui.songDetailCollapsed;
   const detailsToggle = btn(`${detailsCollapsed ? '▸' : '▾'} Details`, { action: 'toggle-song-detail', sm: true });
+  const tabLinkHTML = song.tabUrl ? `<a href="${esc(song.tabUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '6px', padding: '6px 14px', background: C.raised, border: `1px solid ${C.acc}44`, 'border-radius': '6px', color: C.acc, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none', 'margin-bottom': '8px' })}">${icon('pick', 14)} ${esc(tabSite || 'View Tab')} ↗</a>` : '';
   const detailsBody = detailsCollapsed ? '' : `
       <div style="${css({ display: 'flex', gap: '8px', 'align-items': 'center', 'flex-wrap': 'wrap', 'margin-bottom': '8px' })}">
         <span id="sd-status-chips" style="${css({ display: 'inline-flex', gap: '4px' })}">${statusChipsHTML(song)}</span>
@@ -643,7 +644,6 @@ function songDetailTemplate(song) {
         ${song.artist && song.artist !== 'Original' ? `<span style="${css({ color: C.dim, 'font-size': '13px' })}">· ${esc(song.artist)}</span>` : ''}
       </div>
       ${tagsHTML}
-      ${song.tabUrl ? `<a href="${esc(song.tabUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '6px', padding: '6px 14px', background: C.raised, border: `1px solid ${C.acc}44`, 'border-radius': '6px', color: C.acc, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">${icon('pick', 14)} ${esc(tabSite || 'View Tab')} ↗</a>` : ''}
       <div id="sd-meta-widget" style="${css({ 'margin-top': '14px', 'padding-top': '14px', 'border-top': `1px solid ${C.border}` })}">${songMetaWidgetHTML(song)}</div>`;
 
   return `<div>
@@ -656,6 +656,7 @@ function songDetailTemplate(song) {
         <h1 style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '28px', 'font-weight': 500, 'letter-spacing': '0.02em', color: C.txt, margin: 0 })}">${esc(song.title)}</h1>
         ${detailsToggle}
       </div>
+      ${tabLinkHTML}
       ${detailsBody}
     </div>
     <div style="${css({ display: 'flex', gap: '2px', background: '#080808', 'border-radius': '8px', padding: '3px', width: 'fit-content', 'margin-bottom': '10px' })}">${tabsRow}</div>
