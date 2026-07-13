@@ -150,7 +150,7 @@ const state = {
   ui: {
     songFilter: 'all',
     songQuery: '',
-    songSort: 'none',
+    songSort: 'status',
     songGroupCollapsed: {},
     slExpanded: null,
     slPicker: null,
