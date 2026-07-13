@@ -156,7 +156,7 @@ const state = {
     songDetailCollapsed: true,
     slExpanded: null,
     slPicker: null,
-    jamShowOpen: true,
+    jamShowOpen: false,
     jamShowProposed: true,
     jamShowPast: false,
     jamCardOpen: {},
@@ -1027,28 +1027,32 @@ function proposedJamBlockTemplate(jam) {
   const noMembers = state.members.filter(m => !avail[m.id]);
   const total = state.members.length;
   const canConfirm = inMembers.length >= Math.ceil(total / 2);
+  const open = !!state.ui.jamCardOpen[jam.id];
 
-  return `<div style="${css({ 'margin-bottom': '22px' })}">
-    <div style="${css({ background: C.surf, border: `1px solid ${C.acc}44`, 'border-left': `3px solid ${C.acc}`, 'border-radius': '10px', padding: '13px 16px', display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '6px' })}">
+  return `<div style="${css({ 'margin-bottom': '8px' })}">
+    <div data-action="toggle-jam-card" data-id="${jam.id}" style="${css({ background: C.surf, border: `1px solid ${C.acc}44`, 'border-left': `3px solid ${C.acc}`, 'border-radius': '10px', padding: '13px 16px', display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', cursor: 'pointer' })}">
       <div>
         <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '20px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '3px' })}">
           ${fmtDate(jam.date)}${jam.time ? `<span style="color:${C.acc};font-size:15px;font-weight:400;font-family:'DM Sans', sans-serif;margin-left:10px">${fmtTimeRange(jam)}</span>` : ''}
         </div>
         ${jam.location ? `<div style="${css({ 'font-size': '12px', color: C.sub })}">${icon('pin', 13)} ${esc(jam.location)}</div>` : ''}
       </div>
-      <div style="${css({ display: 'flex', gap: '6px', flexShrink: 0, 'margin-left': '16px' })}">
+      <div style="${css({ display: 'flex', 'align-items': 'center', gap: '6px', flexShrink: 0, 'margin-left': '16px' })}">
         <span style="${css({ background: '#1D2B18', color: C.sage, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${inMembers.length}✓</span>
         ${mayMembers.length > 0 ? `<span style="${css({ background: '#2B1013', color: C.acc, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${mayMembers.length}?</span>` : ''}
         ${outMembers.length > 0 ? `<span style="${css({ background: '#2B1510', color: C.org, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${outMembers.length}✗</span>` : ''}
         ${noMembers.length > 0 ? `<span style="${css({ background: C.raised, color: C.dim, padding: '3px 9px', 'border-radius': '5px', 'font-size': '12px', 'font-weight': 700 })}">${noMembers.length}◌</span>` : ''}
+        <span style="${css({ color: C.dim, 'font-size': '12px', 'margin-left': '4px' })}">${open ? '▲' : '▼'}</span>
       </div>
     </div>
-    <div style="${css({ 'padding-left': '4px' })}">${state.members.map(m => jamMemberRow(jam, m, true)).join('')}</div>
-    <div style="${css({ display: 'flex', gap: '8px', 'margin-top': '10px', 'padding-left': '4px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
-      <button data-action="confirm-jam" data-id="${jam.id}" style="${css({ background: canConfirm ? C.sage : 'transparent', color: canConfirm ? C.bg : C.sage, border: `1.5px solid ${C.sage}`, padding: '5px 14px', 'border-radius': '6px', cursor: 'pointer', 'font-size': '12px', 'font-weight': 700, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px' })}">${canConfirm ? `${icon('checkCircle', 14)} Confirm Jam` : `Confirm (${inMembers.length}/${Math.ceil(total / 2)} votes)`}</button>
-      ${btn('✏ Edit', { action: 'open-edit-jam-modal', data: { id: jam.id }, sm: true })}
-      ${btn('Delete', { action: 'delete-jam', data: { id: jam.id }, sm: true, variant: 'danger' })}
-    </div>
+    ${open ? `<div style="${css({ 'margin-top': '6px' })}">
+      <div style="${css({ 'padding-left': '4px' })}">${state.members.map(m => jamMemberRow(jam, m, true)).join('')}</div>
+      <div style="${css({ display: 'flex', gap: '8px', 'margin-top': '10px', 'padding-left': '4px', 'flex-wrap': 'wrap', 'align-items': 'center' })}">
+        <button data-action="confirm-jam" data-id="${jam.id}" style="${css({ background: canConfirm ? C.sage : 'transparent', color: canConfirm ? C.bg : C.sage, border: `1.5px solid ${C.sage}`, padding: '5px 14px', 'border-radius': '6px', cursor: 'pointer', 'font-size': '12px', 'font-weight': 700, 'font-family': "'DM Sans', sans-serif", display: 'flex', 'align-items': 'center', gap: '5px' })}">${canConfirm ? `${icon('checkCircle', 14)} Confirm Jam` : `Confirm (${inMembers.length}/${Math.ceil(total / 2)} votes)`}</button>
+        ${btn('✏ Edit', { action: 'open-edit-jam-modal', data: { id: jam.id }, sm: true })}
+        ${btn('Delete', { action: 'delete-jam', data: { id: jam.id }, sm: true, variant: 'danger' })}
+      </div>
+    </div>` : ''}
   </div>`;
 }
 
@@ -1080,12 +1084,12 @@ function jamCalendarMonthHTML(year, month, jams) {
       bg = `${c}26`; border = c; color = C.txt;
     }
     const title = dayJams.map(j => `${fmtTimeRange(j) || 'Time TBD'}${j.location ? ' · ' + j.location : ''}`).join('\n');
-    cells += `<div title="${esc(title)}" style="${css({ 'font-size': '11px', color, background: bg, border: `1px solid ${border}`, 'border-radius': '5px', height: '24px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-weight': isToday ? 700 : 400, position: 'relative' })}">${day}${isToday ? `<span style="${css({ position: 'absolute', bottom: '2px', width: '3px', height: '3px', 'border-radius': '50%', background: C.acc })}"></span>` : ''}</div>`;
+    cells += `<div title="${esc(title)}" style="${css({ 'font-size': '12px', color, background: bg, border: `1px solid ${border}`, 'border-radius': '5px', height: '32px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-weight': isToday ? 700 : 400, position: 'relative' })}">${day}${isToday ? `<span style="${css({ position: 'absolute', bottom: '3px', width: '3px', height: '3px', 'border-radius': '50%', background: C.acc })}"></span>` : ''}</div>`;
   }
-  return `<div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '12px', 'min-width': '210px' })}">
-    <div style="${css({ 'font-size': '12px', 'font-weight': 700, color: C.txt, 'margin-bottom': '8px', 'text-transform': 'uppercase', 'letter-spacing': '0.04em' })}">${monthLabel}</div>
-    <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(7, 1fr)', gap: '3px', 'margin-bottom': '4px' })}">${dowRow}</div>
-    <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(7, 1fr)', gap: '3px' })}">${cells}</div>
+  return `<div style="${css({ background: C.surf, border: `1px solid ${C.border}`, 'border-radius': '10px', padding: '14px', width: '100%', 'box-sizing': 'border-box' })}">
+    <div style="${css({ 'font-size': '13px', 'font-weight': 700, color: C.txt, 'margin-bottom': '10px', 'text-transform': 'uppercase', 'letter-spacing': '0.04em' })}">${monthLabel}</div>
+    <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(7, 1fr)', gap: '4px', 'margin-bottom': '5px' })}">${dowRow}</div>
+    <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(7, 1fr)', gap: '4px' })}">${cells}</div>
   </div>`;
 }
 function jamCalendarStripHTML() {
@@ -1095,7 +1099,7 @@ function jamCalendarStripHTML() {
   withDates.forEach(j => { const key = j.date.slice(0, 7); if (!months.has(key)) months.set(key, []); months.get(key).push(j); });
   const grids = [...months.keys()].sort().map(key => { const [y, m] = key.split('-').map(Number); return jamCalendarMonthHTML(y, m - 1, months.get(key)); }).join('');
   return `<div style="${css({ 'margin-bottom': '22px' })}">
-    <div style="${css({ display: 'flex', gap: '12px', 'flex-wrap': 'wrap', 'margin-bottom': '8px' })}">${grids}</div>
+    <div style="${css({ display: 'grid', 'grid-template-columns': 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', width: '100%', 'margin-bottom': '8px' })}">${grids}</div>
     <div style="${css({ display: 'flex', gap: '14px', 'font-size': '11px', color: C.sub })}">
       <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.sage}26`, border: `1px solid ${C.sage}`, 'margin-right': '5px' })}"></span>Confirmed</span>
       <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.acc}26`, border: `1px solid ${C.acc}`, 'margin-right': '5px' })}"></span>Proposed</span>
@@ -1115,12 +1119,12 @@ function jamsViewTemplate() {
     ${sh('Jams', '', btn('+ Propose Date', { action: 'open-add-jam-modal', variant: 'primary' }))}
     ${jamCalendarStripHTML()}
     <div style="${css({ 'margin-bottom': '22px' })}">
-      ${collapseHead(jamShowOpen, 'open', '●', 'Open Jams', openJams.length, C.sage)}
-      ${jamShowOpen ? (openJams.length === 0 ? `<div style="${css({ 'font-size': '13px', color: C.dim, padding: '6px 0 4px', 'line-height': 1.6 })}">No confirmed jams yet — confirm a proposal once the band votes in.</div>` : openJams.map(j => jamCardTemplate(j, 'open')).join('')) : ''}
-    </div>
-    <div style="${css({ 'margin-bottom': '22px' })}">
       ${collapseHead(jamShowProposed, 'proposed', '◐', 'Proposed Dates', proposed.length, C.acc)}
       ${jamShowProposed ? (proposed.length === 0 ? `<div style="${css({ 'font-size': '13px', color: C.dim, padding: '6px 0 4px', 'line-height': 1.6 })}">No proposals yet — propose a date and let everyone vote.</div>` : proposed.map(j => proposedJamBlockTemplate(j)).join('')) : ''}
+    </div>
+    <div style="${css({ 'margin-bottom': '22px' })}">
+      ${collapseHead(jamShowOpen, 'open', '●', 'Open Jams', openJams.length, C.sage)}
+      ${jamShowOpen ? (openJams.length === 0 ? `<div style="${css({ 'font-size': '13px', color: C.dim, padding: '6px 0 4px', 'line-height': 1.6 })}">No confirmed jams yet — confirm a proposal once the band votes in.</div>` : openJams.map(j => jamCardTemplate(j, 'open')).join('')) : ''}
     </div>
     <div>
       ${collapseHead(jamShowPast, 'past', '○', 'Past Jams', past.length, C.dim)}
