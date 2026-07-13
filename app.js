@@ -703,7 +703,7 @@ function songCardHTML(song) {
 // first (which instead determines the grouping itself — see groupSongs).
 function songSortComparator(key) {
   if (key === 'artist') return (a, b) => (a.artist || '').localeCompare(b.artist || '');
-  if (key === 'status') { const ord = { ready: 0, learning: 1, shelved: 2 }; return (a, b) => (ord[a.status] ?? 3) - (ord[b.status] ?? 3); }
+  if (key === 'status') { const ord = { learning: 0, ready: 1, shelved: 2 }; return (a, b) => (ord[a.status] ?? 3) - (ord[b.status] ?? 3); }
   if (key === 'rating') return (a, b) => (b.rating || 0) - (a.rating || 0);
   if (key === 'votes') return (a, b) => (b.votes || []).length - (a.votes || []).length;
   return null; // 'setlist' has no single per-song value to sort by within an already-grouped bucket
@@ -740,7 +740,7 @@ function groupSongs(filtered, keys) {
       .map(r => ({ label: r === 0 ? 'Not Started' : `${r}% Complete`, songs: filtered.filter(s => (s.rating || 0) === r) }))
       .filter(g => g.songs.length);
   } else if (mode === 'status') {
-    const order = [['ready', 'Ready'], ['learning', 'Learning'], ['shelved', 'Shelved']];
+    const order = [['learning', 'Learning'], ['ready', 'Ready'], ['shelved', 'Shelved']];
     groups = order.map(([s, label]) => ({ label, songs: filtered.filter(x => x.status === s) })).filter(g => g.songs.length);
   } else if (mode === 'votes') {
     const map = new Map();
