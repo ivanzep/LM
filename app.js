@@ -425,6 +425,18 @@ let sdTab = 'lyrics', sdPlaying = false, sdSpeed = 3, sdInterval = null, sdPlayl
 function stopTeleprompterInterval() { if (sdInterval) { clearInterval(sdInterval); sdInterval = null; } }
 function openSong(song) { state.songPage = song; sdTab = 'lyrics'; sdPlaying = false; sdSpeed = 3; stopTeleprompterInterval(); render(); }
 function closeSong() { stopTeleprompterInterval(); state.songPage = null; render(); }
+// Opens a song's detail page from a section other than Songs (e.g. a
+// setlist song row). Switches nav via history.replaceState rather than
+// location.hash, so the hashchange listener's goToNav() — which always
+// clears state.songPage — doesn't race with and wipe out the song we just
+// set here.
+function openSongFrom(id) {
+  const song = state.songs.find(s => s.id === id);
+  if (!song) return;
+  state.nav = 'songs';
+  openSong(song);
+  if (location.hash.slice(1) !== 'songs') history.replaceState(null, '', '#songs');
+}
 function switchSongTab(t) {
   sdTab = t;
   sdPlaying = false;
@@ -850,6 +862,29 @@ function moveSetlistSong(slId, i, dir) {
 }
 function removeSetlistSong(slId, sId) { updSetlists(state.setlists.map(sl => sl.id === slId ? { ...sl, songIds: sl.songIds.filter(id => id !== sId) } : sl)); render(); }
 function openSetlistPicker(slId) { state.ui.slPicker = slId; render(); }
+function reorderSetlists(draggedId, targetId) {
+  const list = [...state.setlists];
+  const from = list.findIndex(sl => sl.id === draggedId);
+  const to = list.findIndex(sl => sl.id === targetId);
+  if (from === -1 || to === -1 || from === to) return;
+  const [item] = list.splice(from, 1);
+  list.splice(to, 0, item);
+  updSetlists(list);
+  render();
+}
+function reorderSetlistSong(setlistId, draggedSongId, targetSongId) {
+  updSetlists(state.setlists.map(sl => {
+    if (sl.id !== setlistId) return sl;
+    const ids = [...sl.songIds];
+    const from = ids.indexOf(draggedSongId);
+    const to = ids.indexOf(targetSongId);
+    if (from === -1 || to === -1 || from === to) return sl;
+    const [item] = ids.splice(from, 1);
+    ids.splice(to, 0, item);
+    return { ...sl, songIds: ids };
+  }));
+  render();
+}
 function addSongToSetlist(slId, sId) {
   updSetlists(state.setlists.map(sl => sl.id === slId ? { ...sl, songIds: [...sl.songIds.filter(id => id !== sId), sId] } : sl));
   state.ui.slPicker = null;
@@ -865,9 +900,10 @@ function setlistsViewTemplate() {
     const songsHTML = slSongs.length === 0
       ? `<div style="${css({ 'text-align': 'center', padding: '16px 0', color: C.dim, 'font-size': '13px' })}">No songs yet.</div>`
       : slSongs.map((song, i) => `
-        <div style="${css({ display: 'flex', 'align-items': 'center', gap: '10px', padding: '8px 10px', background: C.raised, 'border-radius': '8px', 'margin-bottom': '6px' })}">
+        <div data-drop="setlist-song" data-drop-id="${song.id}" data-drop-parent="${sl.id}" style="${css({ display: 'flex', 'align-items': 'center', gap: '8px', padding: '8px 10px', background: C.raised, 'border-radius': '8px', 'margin-bottom': '6px' })}">
+          <span draggable="true" data-drag="setlist-song" data-drag-id="${song.id}" data-drag-parent="${sl.id}" title="Drag to reorder" style="${css({ cursor: 'grab', color: C.dim, 'font-size': '13px', 'letter-spacing': '-2px', 'user-select': 'none', flexShrink: 0 })}">⋮⋮</span>
           <span style="${css({ 'font-family': "'Bebas Neue', sans-serif", color: C.acc, 'font-size': '18px', width: '22px', 'text-align': 'right', flexShrink: 0 })}">${i + 1}</span>
-          <div style="${css({ flex: 1 })}">
+          <div data-action="open-song-from-setlist" data-id="${song.id}" style="${css({ flex: 1, cursor: 'pointer', 'min-width': 0 })}">
             <div style="${css({ 'font-size': '14px', 'font-weight': 500, color: C.txt })}">${esc(song.title)}</div>
             <div style="${css({ 'font-size': '11px', color: C.sub })}">${esc(song.key)} · ${esc(song.bpm)} BPM${song.genre ? ` · ${esc(song.genre)}` : ''}</div>
           </div>
@@ -880,15 +916,18 @@ function setlistsViewTemplate() {
         </div>
       `).join('');
 
-    return `<div style="${css({ background: C.surf, border: `1px solid ${open ? C.acc : C.border}`, 'border-radius': '10px', padding: '16px', 'margin-bottom': '10px', transition: 'border-color 0.15s' })}">
-      <div data-action="toggle-setlist-expand" data-id="${sl.id}" style="${css({ cursor: 'pointer', display: 'flex', 'justify-content': 'space-between', 'align-items': 'flex-start' })}">
-        <div>
-          <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '17px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '4px' })}">${esc(sl.name)}</div>
-          <div style="${css({ 'font-size': '12px', color: C.sub })}">${slSongs.length} song${slSongs.length !== 1 ? 's' : ''}${sl.created ? `<span style="color:${C.dim}"> · ${fmtDate(sl.created)}</span>` : ''}</div>
-        </div>
-        <div style="${css({ display: 'flex', gap: '6px', 'align-items': 'center' })}">
-          ${btn('Edit', { action: 'open-edit-setlist-modal', data: { id: sl.id }, sm: true })}
-          <span style="${css({ color: C.dim })}">${open ? '▲' : '▼'}</span>
+    return `<div data-drop="setlist" data-drop-id="${sl.id}" style="${css({ background: C.surf, border: `1px solid ${open ? C.acc : C.border}`, 'border-radius': '10px', padding: '16px', 'margin-bottom': '10px', transition: 'border-color 0.15s' })}">
+      <div style="${css({ display: 'flex', 'align-items': 'flex-start', gap: '8px' })}">
+        <span draggable="true" data-drag="setlist" data-drag-id="${sl.id}" title="Drag to reorder" style="${css({ cursor: 'grab', color: C.dim, 'font-size': '15px', 'letter-spacing': '-2px', 'user-select': 'none', flexShrink: 0, 'margin-top': '2px' })}">⋮⋮</span>
+        <div data-action="toggle-setlist-expand" data-id="${sl.id}" style="${css({ cursor: 'pointer', display: 'flex', 'justify-content': 'space-between', 'align-items': 'flex-start', flex: 1, 'min-width': 0 })}">
+          <div>
+            <div style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '17px', 'font-weight': 500, color: C.txt, 'letter-spacing': '0.02em', 'margin-bottom': '4px' })}">${esc(sl.name)}</div>
+            <div style="${css({ 'font-size': '12px', color: C.sub })}">${slSongs.length} song${slSongs.length !== 1 ? 's' : ''}${sl.created ? `<span style="color:${C.dim}"> · ${fmtDate(sl.created)}</span>` : ''}</div>
+          </div>
+          <div style="${css({ display: 'flex', gap: '6px', 'align-items': 'center' })}">
+            ${btn('Edit', { action: 'open-edit-setlist-modal', data: { id: sl.id }, sm: true })}
+            <span style="${css({ color: C.dim })}">${open ? '▲' : '▼'}</span>
+          </div>
         </div>
       </div>
       ${open ? `<div style="${css({ 'margin-top': '14px', 'border-top': `1px solid ${C.border}`, 'padding-top': '14px' })}">
@@ -1610,6 +1649,7 @@ document.addEventListener('click', (e) => {
     case 'toggle-setlist-expand': toggleSetlistExpand(id); return;
     case 'move-setlist-song': moveSetlistSong(el.dataset.setlistId, Number(el.dataset.index), Number(el.dataset.dir)); return;
     case 'remove-setlist-song': removeSetlistSong(el.dataset.setlistId, el.dataset.songId); return;
+    case 'open-song-from-setlist': openSongFrom(el.dataset.id); return;
     case 'open-setlist-picker': state.modal = { type: 'pickSetlistSong' }; openSetlistPicker(id); return;
     case 'add-song-to-setlist': addSongToSetlist(el.dataset.setlistId, el.dataset.songId); return;
 
@@ -1692,6 +1732,44 @@ document.addEventListener('change', (e) => {
     sdPlaylistId = e.target.value;
     render();
   }
+});
+
+// ── Drag & drop (setlist reordering, setlist song reordering) ─────
+// Generic: a small drag-handle element carries data-drag="<type>" and
+// data-drag-id (plus data-drag-parent for scoped lists like a setlist's
+// songs); the enclosing row/card carries the matching data-drop="<type>"
+// and data-drop-id (plus data-drop-parent). Dropping calls the reorder
+// function for that type.
+let dragPayload = null;
+document.addEventListener('dragstart', (e) => {
+  const handle = e.target.closest('[data-drag]');
+  if (!handle) return;
+  dragPayload = { type: handle.dataset.drag, id: handle.dataset.dragId, parent: handle.dataset.dragParent || null };
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', handle.dataset.dragId); } catch {}
+  const row = handle.closest('[data-drop]');
+  if (row) row.style.opacity = '0.4';
+});
+document.addEventListener('dragover', (e) => {
+  if (!dragPayload) return;
+  const row = e.target.closest(`[data-drop="${dragPayload.type}"]`);
+  if (row && (!dragPayload.parent || row.dataset.dropParent === dragPayload.parent)) e.preventDefault();
+});
+document.addEventListener('drop', (e) => {
+  if (!dragPayload) return;
+  const row = e.target.closest(`[data-drop="${dragPayload.type}"]`);
+  if (row && row.dataset.dropId !== dragPayload.id && (!dragPayload.parent || row.dataset.dropParent === dragPayload.parent)) {
+    e.preventDefault();
+    if (dragPayload.type === 'setlist') reorderSetlists(dragPayload.id, row.dataset.dropId);
+    else if (dragPayload.type === 'setlist-song') reorderSetlistSong(dragPayload.parent, dragPayload.id, row.dataset.dropId);
+  }
+  dragPayload = null;
+});
+document.addEventListener('dragend', (e) => {
+  const handle = e.target.closest('[data-drag]');
+  const row = handle && handle.closest('[data-drop]');
+  if (row) row.style.opacity = '';
+  dragPayload = null;
 });
 
 // ── Init ──────────────────────────────────────────────────────
