@@ -153,6 +153,7 @@ const state = {
     songSortKeys: ['status'],
     songGroupCollapsed: {},
     songControlsCollapsed: true,
+    songDetailCollapsed: true,
     slExpanded: null,
     slPicker: null,
     jamShowOpen: true,
@@ -617,6 +618,8 @@ function setSongStatus(id, status) {
   if (el) el.innerHTML = statusChipsHTML(updated);
 }
 
+function toggleSongDetailCollapsed() { state.ui.songDetailCollapsed = !state.ui.songDetailCollapsed; render(); }
+
 function songDetailContentHTML(song) {
   if (sdTab === 'lyrics') return `<div style="${css({ 'white-space': 'pre-wrap', 'font-size': '15px', color: C.sub, 'line-height': 2.0, 'font-family': "'DM Sans', sans-serif" })}">${song.lyrics ? esc(song.lyrics) : `<em style="color:${C.dim}">No lyrics yet — click Edit Song to add.</em>`}</div>`;
   if (sdTab === 'tabs') return `<div style="${css({ 'font-family': "'JetBrains Mono', monospace", 'font-size': '13px', color: C.acc, 'white-space': 'pre', 'line-height': 1.8 })}">${song.tabs ? esc(song.tabs) : `<span style="color:${C.dim};font-family:'DM Sans', sans-serif;font-style:italic">No tabs yet — click Edit Song to add.</span>`}</div>`;
@@ -629,14 +632,9 @@ function songDetailTemplate(song) {
   const content = songDetailContentHTML(song);
 
   const tagsHTML = song.tags ? `<div style="${css({ display: 'flex', gap: '4px', 'flex-wrap': 'wrap', 'margin-bottom': '10px' })}">${song.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `<span style="${css({ background: C.raised, color: C.dim, padding: '1px 7px', 'border-radius': '3px', 'font-size': '10px', border: `1px solid ${C.border}` })}">${esc(t)}</span>`).join('')}</div>` : '';
-
-  return `<div>
-    <div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '20px' })}">
-      <button data-action="back-to-songs" style="${css({ background: 'none', border: 'none', color: C.txt, cursor: 'pointer', 'font-family': "'Bebas Neue', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em', display: 'flex', 'align-items': 'center', gap: '6px', padding: 0 })}">← Songs</button>
-      ${btn('✏ Edit Song', { action: 'open-edit-song-modal', data: { id: song.id } })}
-    </div>
-    <div style="${css({ 'margin-bottom': '18px', 'padding-bottom': '18px', 'border-bottom': `1px solid ${C.border}` })}">
-      <h1 style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '28px', 'font-weight': 500, 'letter-spacing': '0.02em', color: C.txt, margin: '0 0 10px 0' })}">${esc(song.title)}</h1>
+  const detailsCollapsed = state.ui.songDetailCollapsed;
+  const detailsToggle = btn(`${detailsCollapsed ? '▸' : '▾'} Details`, { action: 'toggle-song-detail', sm: true });
+  const detailsBody = detailsCollapsed ? '' : `
       <div style="${css({ display: 'flex', gap: '8px', 'align-items': 'center', 'flex-wrap': 'wrap', 'margin-bottom': '8px' })}">
         <span id="sd-status-chips" style="${css({ display: 'inline-flex', gap: '4px' })}">${statusChipsHTML(song)}</span>
         <span style="${css({ color: C.sub, 'font-size': '13px' })}">${esc(song.key)}</span>
@@ -646,7 +644,19 @@ function songDetailTemplate(song) {
       </div>
       ${tagsHTML}
       ${song.tabUrl ? `<a href="${esc(song.tabUrl)}" target="_blank" rel="noopener noreferrer" style="${css({ display: 'inline-flex', 'align-items': 'center', gap: '6px', padding: '6px 14px', background: C.raised, border: `1px solid ${C.acc}44`, 'border-radius': '6px', color: C.acc, 'font-size': '12px', 'font-weight': 600, 'text-decoration': 'none' })}">${icon('pick', 14)} ${esc(tabSite || 'View Tab')} ↗</a>` : ''}
-      <div id="sd-meta-widget" style="${css({ 'margin-top': '14px', 'padding-top': '14px', 'border-top': `1px solid ${C.border}` })}">${songMetaWidgetHTML(song)}</div>
+      <div id="sd-meta-widget" style="${css({ 'margin-top': '14px', 'padding-top': '14px', 'border-top': `1px solid ${C.border}` })}">${songMetaWidgetHTML(song)}</div>`;
+
+  return `<div>
+    <div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '20px' })}">
+      <button data-action="back-to-songs" style="${css({ background: 'none', border: 'none', color: C.txt, cursor: 'pointer', 'font-family': "'Bebas Neue', sans-serif", 'font-size': '22px', 'font-weight': 500, 'letter-spacing': '0.03em', display: 'flex', 'align-items': 'center', gap: '6px', padding: 0 })}">← Songs</button>
+      ${btn('✏ Edit Song', { action: 'open-edit-song-modal', data: { id: song.id } })}
+    </div>
+    <div style="${css({ 'margin-bottom': '18px', 'padding-bottom': '18px', 'border-bottom': `1px solid ${C.border}` })}">
+      <div style="${css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', gap: '10px', 'margin-bottom': '10px' })}">
+        <h1 style="${css({ 'font-family': "'Bebas Neue', sans-serif", 'font-size': '28px', 'font-weight': 500, 'letter-spacing': '0.02em', color: C.txt, margin: 0 })}">${esc(song.title)}</h1>
+        ${detailsToggle}
+      </div>
+      ${detailsBody}
     </div>
     <div style="${css({ display: 'flex', gap: '2px', background: '#080808', 'border-radius': '8px', padding: '3px', width: 'fit-content', 'margin-bottom': '10px' })}">${tabsRow}</div>
     <div style="${css({ border: `1px solid ${C.border}`, 'border-radius': '10px', overflow: 'hidden' })}">
@@ -1461,6 +1471,7 @@ document.addEventListener('click', (e) => {
     case 'set-song-status': setSongStatus(el.dataset.id, el.dataset.status); return;
     case 'toggle-song-sort-key': toggleSongSortKey(el.dataset.key); return;
     case 'toggle-song-controls': toggleSongControls(); return;
+    case 'toggle-song-detail': toggleSongDetailCollapsed(); return;
     case 'toggle-song-group': toggleSongGroupCollapse(el.dataset.key); return;
 
     case 'open-add-setlist-modal': openAddSetlistModal(); return;
