@@ -148,7 +148,7 @@ const state = {
   playlists: S_PLAYLISTS,
   modal: null,
   ui: {
-    songFilter: 'active',
+    songFilter: 'all',
     songQuery: '',
     songSortKeys: ['status'],
     songGroupCollapsed: {},
@@ -340,7 +340,7 @@ function taHTML({ id, value = '', placeholder = '', rows = 4, mono = false }) {
 function lbl(text) { return `<div style="${css({ 'font-size': '10px', 'font-weight': 700, color: C.sub, 'letter-spacing': '0.06em', 'text-transform': 'uppercase', 'margin-bottom': '5px' })}">${text}</div>`; }
 
 function statusBadge(status) {
-  const m = { ready: [C.sage, '#1D2B18', 'Ready'], learning: [C.acc, '#2B1013', 'Learning'], shelved: [C.dim, '#1E1E1E', 'Shelved'] };
+  const m = { ready: [C.sage, '#1D2B18', 'Active'], learning: [C.acc, '#2B1013', 'Learning'], shelved: [C.dim, '#1E1E1E', 'Shelved'] };
   const [c, bg, l] = m[status] || m.shelved;
   return `<span style="${css({ background: bg, color: c, padding: '2px 7px', 'border-radius': '4px', 'font-size': '10px', 'font-weight': 700, 'letter-spacing': '0.04em' })}">${l}</span>`;
 }
@@ -600,7 +600,7 @@ function toggleSongVote(songId, memberId) {
   if (el) el.innerHTML = songMetaWidgetHTML(updated);
 }
 
-const STATUS_INFO = { ready: [C.sage, 'Ready'], learning: [C.acc, 'Learning'], shelved: [C.dim, 'Shelved'] };
+const STATUS_INFO = { ready: [C.sage, 'Active'], learning: [C.acc, 'Learning'], shelved: [C.dim, 'Shelved'] };
 function statusChipsHTML(song) {
   return Object.entries(STATUS_INFO).map(([s, [c, label]]) => {
     const active = song.status === s;
@@ -742,7 +742,7 @@ function groupSongs(filtered, keys) {
       .map(r => ({ label: r === 0 ? 'Not Started' : `${r}% Complete`, songs: filtered.filter(s => (s.rating || 0) === r) }))
       .filter(g => g.songs.length);
   } else if (mode === 'status') {
-    const order = [['learning', 'Learning'], ['ready', 'Ready'], ['shelved', 'Shelved']];
+    const order = [['learning', 'Learning'], ['ready', 'Active'], ['shelved', 'Shelved']];
     groups = order.map(([s, label]) => ({ label, songs: filtered.filter(x => x.status === s) })).filter(g => g.songs.length);
   } else if (mode === 'votes') {
     const map = new Map();
@@ -758,11 +758,12 @@ function groupSongs(filtered, keys) {
 function songsViewTemplate() {
   const { songFilter, songQuery, songSortKeys, songControlsCollapsed } = state.ui;
   const filtered = state.songs.filter(s => {
-    const ok = songFilter === 'all' || (songFilter === 'active' ? s.status !== 'shelved' : s.status === songFilter);
+    const ok = songFilter === 'all' || s.status === songFilter;
     const q = songQuery.toLowerCase();
     return ok && (!q || s.title.toLowerCase().includes(q) || (s.genre || '').toLowerCase().includes(q) || (s.tags || '').toLowerCase().includes(q));
   });
-  const filterChips = ['all', 'active', 'ready', 'learning', 'shelved'].map(f => `<button data-action="set-song-filter" data-filter="${f}" style="${chipStyle(songFilter === f)}">${f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}</button>`).join('');
+  const filterLabels = { all: 'All', ready: 'Active', learning: 'Learning', shelved: 'Shelved' };
+  const filterChips = ['all', 'ready', 'learning', 'shelved'].map(f => `<button data-action="set-song-filter" data-filter="${f}" style="${chipStyle(songFilter === f)}">${filterLabels[f]}</button>`).join('');
   const noneChip = `<button data-action="toggle-song-sort-key" data-key="none" style="${chipStyle(songSortKeys.length === 0)}">None</button>`;
   const sortChips = noneChip + [['artist', 'Artist'], ['setlist', 'Setlist'], ['status', 'Status'], ['rating', 'Completion'], ['votes', 'Votes']]
     .map(([v, label]) => {
