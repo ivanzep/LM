@@ -15,7 +15,7 @@
 const SCHEMAS = {
   songs:     ['id', 'title', 'artist', 'key', 'bpm', 'genre', 'status', 'tags', 'tabUrl', 'lyrics', 'tabs', 'notes', 'rating', 'votes'],
   setlists:  ['id', 'name', 'songIds', 'created', 'notes'],
-  jams:      ['id', 'date', 'time', 'endTime', 'location', 'notes', 'status', 'availability'],
+  jams:      ['id', 'date', 'time', 'endTime', 'location', 'notes', 'status', 'availability', 'silent', 'declined'],
   members:   ['id', 'name', 'instrument', 'color'],
   reminders: ['id', 'text', 'dueDate', 'priority', 'done'],
   playlists: ['id', 'memberId', 'name', 'url', 'description'],
