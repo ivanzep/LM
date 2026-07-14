@@ -1143,18 +1143,21 @@ function jamCalendarMonthHTML(year, month, jams) {
       const c = dayJams.some(j => j.status === 'confirmed') ? C.sage : C.acc;
       bg = `${c}26`; border = c; color = C.txt;
     }
-    if (isToday) { bg = 'transparent'; border = C.txt; }
     const hasNoVote = dayJams.some(j => Object.values(j.availability || {}).includes('out'));
-    const xLineStyle = css({ position: 'absolute', top: '50%', left: '12%', right: '12%', height: '2px', background: C.sub, 'border-radius': '1px' });
-    const xMark = hasNoVote ? `<span style="${xLineStyle};transform:rotate(45deg)"></span><span style="${xLineStyle};transform:rotate(-45deg)"></span>` : '';
+    if (hasNoVote) { bg = `${C.dim}40`; border = C.dim; color = C.sub; }
+    if (isToday) { bg = 'transparent'; border = C.txt; }
+    // Two diagonal gradient lines rather than rotated fixed-width elements —
+    // a CSS gradient's line always spans exactly corner-to-corner of its
+    // box by definition, regardless of the box's aspect ratio.
+    const xLine = `transparent calc(50% - 1px), ${C.sub} calc(50% - 1px), ${C.sub} calc(50% + 1px), transparent calc(50% + 1px)`;
+    const backgroundLayers = hasNoVote ? `linear-gradient(to bottom right, ${xLine}), linear-gradient(to bottom left, ${xLine}), ${bg}` : bg;
     const title = dayJams.length ? dayJams.map(j => `${fmtTimeRange(j) || 'Time TBD'}${j.location ? ' · ' + j.location : ''}${Object.values(j.availability || {}).includes('out') ? ' · someone voted No' : ''}`).join('\n') : 'Click to propose a jam';
     const avail = (dayJams[0] && dayJams[0].availability) || {};
     const dots = dayJams.length ? state.members.filter(m => avail[m.id]).map(m => {
       const opacity = avail[m.id] === 'in' ? 1 : avail[m.id] === 'maybe' ? 0.55 : 0.2;
       return `<span style="${css({ width: '4px', height: '4px', 'border-radius': '50%', background: m.color, opacity, display: 'inline-block' })}"></span>`;
     }).join('') : '';
-    cells += `<div data-action="jam-cal-day" data-date="${dateStr}" title="${esc(title)}" style="${css({ 'font-size': '12px', color, background: bg, border: `1px solid ${border}`, 'border-radius': '5px', height: '38px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'center', gap: '2px', 'font-weight': isToday ? 700 : 400, position: 'relative', cursor: 'pointer' })}">
-      ${xMark}
+    cells += `<div data-action="jam-cal-day" data-date="${dateStr}" title="${esc(title)}" style="${css({ 'font-size': '12px', color, background: backgroundLayers, border: `1px solid ${border}`, 'border-radius': '5px', height: '38px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'center', gap: '2px', 'font-weight': isToday ? 700 : 400, position: 'relative', cursor: 'pointer' })}">
       <span>${day}</span>
       ${dots ? `<span style="${css({ display: 'flex', gap: '2px', 'align-items': 'center' })}">${dots}</span>` : ''}
     </div>`;
@@ -1187,7 +1190,7 @@ function jamCalendarStripHTML() {
       <div style="${css({ display: 'flex', gap: '14px', 'font-size': '11px', color: C.sub })}">
         <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.sage}26`, border: `1px solid ${C.sage}`, 'margin-right': '5px' })}"></span>Confirmed</span>
         <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `${C.acc}26`, border: `1px solid ${C.acc}`, 'margin-right': '5px' })}"></span>Proposed</span>
-        <span><span style="${css({ display: 'inline-block', position: 'relative', width: '8px', height: '8px', 'border-radius': '2px', border: `1px solid ${C.border}`, 'margin-right': '5px' })}"><span style="${css({ position: 'absolute', top: '50%', left: '0', right: '0', height: '1.5px', background: C.sub })}; transform:rotate(45deg)"></span><span style="${css({ position: 'absolute', top: '50%', left: '0', right: '0', height: '1.5px', background: C.sub })}; transform:rotate(-45deg)"></span></span>Someone voted No</span>
+        <span><span style="${css({ display: 'inline-block', width: '8px', height: '8px', 'border-radius': '2px', background: `linear-gradient(to bottom right, transparent calc(50% - 1px), ${C.sub} calc(50% - 1px), ${C.sub} calc(50% + 1px), transparent calc(50% + 1px)), linear-gradient(to bottom left, transparent calc(50% - 1px), ${C.sub} calc(50% - 1px), ${C.sub} calc(50% + 1px), transparent calc(50% + 1px)), ${C.dim}40`, border: `1px solid ${C.dim}`, 'margin-right': '5px' })}"></span>Someone voted No</span>
         <span style="${css({ color: C.dim })}">Hover a date for times</span>
       </div>
       ${navBtn(1, 'Next ▶')}
