@@ -1827,3 +1827,12 @@ state.nav = navFromHash();
 if (!location.hash) history.replaceState(null, '', '#' + state.nav); // reflect default without an extra hashchange render
 render();
 if (SYNC_URL) fetchRemote().then(ok => { if (ok) render(); });
+
+// Keep the loading screen (from index.html) up for a fixed 4s on first
+// load, so the Google Sheets sync fetch above has a chance to land before
+// the user ever sees the page — avoids a visible flash from local/stale
+// data to synced data. render() has already populated the DOM underneath.
+setTimeout(() => {
+  const loadScreen = document.getElementById('app-loading');
+  if (loadScreen) loadScreen.remove();
+}, 4000);

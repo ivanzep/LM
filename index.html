@@ -11,8 +11,32 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./style.css" />
+    <style>
+      /* Inlined (not in style.css) so this paints immediately on first
+         load, before app.js has run or the external stylesheet has
+         necessarily applied — avoids a flash of an empty/stale page while
+         localStorage loads and the Google Sheets sync fetch (if any) is
+         still in flight. */
+      #app-loading {
+        position: fixed; inset: 0; z-index: 9999;
+        background: #000000;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        font-family: 'DM Sans', sans-serif;
+      }
+      #app-loading .lm-title {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 22px; letter-spacing: 0.1em; color: #E5383B;
+      }
+      #app-loading .lm-spinner {
+        width: 26px; height: 26px; border-radius: 50%;
+        border: 3px solid #2C2C2C; border-top-color: #E5383B;
+        animation: lm-spin 0.8s linear infinite;
+      }
+      @keyframes lm-spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
+    <div id="app-loading"><div class="lm-spinner"></div><div class="lm-title">LUCKY MACHOS</div></div>
     <div id="topbar-mount"></div>
     <div id="content-row">
       <div id="main-mount"></div>
