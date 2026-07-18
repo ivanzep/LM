@@ -3,7 +3,15 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const fmtDate = (d) => { if (!d) return '—'; const dt = new Date(d + 'T12:00:00'); return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); };
 const fmtTime = (t) => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${h > 12 ? h - 12 : h || 12}:${String(m).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`; };
 const fmtTimeRange = (jam) => { if (!jam.time) return ''; return jam.endTime ? `${fmtTime(jam.time)} – ${fmtTime(jam.endTime)}` : fmtTime(jam.time); };
-const TODAY = new Date().toISOString().slice(0, 10);
+// Freshly computed on every call (never cached) using local date parts —
+// not toISOString(), which is UTC and can be off by a day from the user's
+// actual local calendar date depending on their timezone/time of day. A
+// module-level `const TODAY` computed once at script load would also go
+// stale the moment a tab is left open across a real midnight.
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const css = (o) => Object.entries(o).map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}:${v}`).join(';');
@@ -859,7 +867,7 @@ function saveSetlist(mode, id) {
   const name = document.getElementById('slf-name').value.trim();
   const notes = document.getElementById('slf-notes').value;
   if (!name) return;
-  if (mode === 'add') updSetlists([...state.setlists, { name, notes, id: uid(), songIds: [], created: TODAY }]);
+  if (mode === 'add') updSetlists([...state.setlists, { name, notes, id: uid(), songIds: [], created: todayStr() }]);
   else updSetlists(state.setlists.map(sl => sl.id === id ? { ...sl, name, notes } : sl));
   state.modal = null;
   render();
@@ -1150,7 +1158,7 @@ function jamCalendarMonthHTML(year, month, jams) {
   for (let day = 1; day <= daysInMonth; day++) {
     const dayJams = byDay[day] || [];
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const isToday = dateStr === TODAY;
+    const isToday = dateStr === todayStr();
     let bg = 'transparent', border = 'transparent', color = C.sub;
     const isSilent = dayJams.some(j => j.silent);
     if (dayJams.length) {
@@ -1215,8 +1223,8 @@ function jamCalendarStripHTML() {
 }
 
 function jamsViewTemplate() {
-  const upcoming = state.jams.filter(j => j.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date));
-  const past = state.jams.filter(j => j.date < TODAY).sort((a, b) => b.date.localeCompare(a.date));
+  const upcoming = state.jams.filter(j => j.date >= todayStr()).sort((a, b) => a.date.localeCompare(b.date));
+  const past = state.jams.filter(j => j.date < todayStr()).sort((a, b) => b.date.localeCompare(a.date));
   const openJams = upcoming.filter(j => j.status === 'confirmed');
   // Declining a date (a manual toggle, independent of member votes) takes
   // it off the active list — it stays in state.jams (and still shows on
@@ -1336,10 +1344,10 @@ function remindersViewTemplate() {
   const { remShowDone } = state.ui;
   const priOrd = { high: 0, medium: 1, low: 2 };
   const visible = state.reminders.filter(r => remShowDone ? r.done : !r.done).sort((a, b) => (priOrd[a.priority] ?? 2) - (priOrd[b.priority] ?? 2) || (a.dueDate || '').localeCompare(b.dueDate || ''));
-  const overdueCount = state.reminders.filter(r => !r.done && r.dueDate && r.dueDate < TODAY).length;
+  const overdueCount = state.reminders.filter(r => !r.done && r.dueDate && r.dueDate < todayStr()).length;
 
   const list = visible.length === 0 ? empty(remShowDone ? 'list' : 'checkCircle', remShowDone ? 'Nothing completed yet.' : 'All clear!') : visible.map(r => {
-    const overdue = !r.done && r.dueDate && r.dueDate < TODAY;
+    const overdue = !r.done && r.dueDate && r.dueDate < todayStr();
     return `<div style="${css({ background: C.surf, border: `1px solid ${overdue ? C.org + '44' : C.border}`, 'border-radius': '8px', padding: '12px 14px', 'margin-bottom': '8px', display: 'flex', 'align-items': 'flex-start', gap: '12px' })}">
       <div data-action="toggle-reminder" data-id="${r.id}" style="${css({ width: '20px', height: '20px', 'border-radius': '5px', border: `1.5px solid ${r.done ? C.sage : C.border}`, background: r.done ? C.sage : 'transparent', cursor: 'pointer', flexShrink: 0, 'margin-top': '2px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', transition: 'all 0.15s' })}">${r.done ? `<span style="color:${C.bg};font-size:11px;font-weight:900">✓</span>` : ''}</div>
       <div style="${css({ flex: 1, 'min-width': 0 })}">
