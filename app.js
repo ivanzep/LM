@@ -1822,17 +1822,18 @@ document.addEventListener('dragend', (e) => {
 });
 
 // ── Init ──────────────────────────────────────────────────────
+// Schedule the loading screen's removal FIRST, before anything below that
+// could throw (bad localStorage JSON, a render() bug, etc.) — otherwise an
+// error partway through init halts the script before ever reaching the
+// timer, leaving the overlay stuck on screen forever with no way to
+// dismiss it. This guarantees it's gone after 4s no matter what.
+setTimeout(() => {
+  const loadScreen = document.getElementById('app-loading');
+  if (loadScreen) loadScreen.remove();
+}, 4000);
+
 loadPersisted();
 state.nav = navFromHash();
 if (!location.hash) history.replaceState(null, '', '#' + state.nav); // reflect default without an extra hashchange render
 render();
 if (SYNC_URL) fetchRemote().then(ok => { if (ok) render(); });
-
-// Keep the loading screen (from index.html) up for a fixed 4s on first
-// load, so the Google Sheets sync fetch above has a chance to land before
-// the user ever sees the page — avoids a visible flash from local/stale
-// data to synced data. render() has already populated the DOM underneath.
-setTimeout(() => {
-  const loadScreen = document.getElementById('app-loading');
-  if (loadScreen) loadScreen.remove();
-}, 4000);
